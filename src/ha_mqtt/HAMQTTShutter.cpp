@@ -43,6 +43,10 @@ bool HAMQTTShutter::discover()
     char discoveryTopic[50];
     sprintf(discoveryTopic, this->discoveryTopicTemplate, unique_id);
 
+#if defined(HA_MQTT_DEBUG)
+    Serial.println(discoveryTopic);
+#endif
+
     // Construct discovery payload
     char mqttDiscoveryPayload[500];
     sprintf(mqttDiscoveryPayload, this->discoveryPayloadTemplate, this->name, this->commandTopic, this->stateTopic, this->unique_id, this->positionTopic);
