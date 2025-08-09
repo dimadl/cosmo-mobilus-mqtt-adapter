@@ -1,17 +1,15 @@
 #include <Arduino.h>
 #include <PubSubClient.h>
+#include "CosmoMobilusHardwareAdapter.h"
 #include "HAMQTTShutter.h"
 #include "HAMQTTShutterControl.h"
-
-#define BUTTON_DELAY 10
 
 #define FULLY_OPENED 100
 
 void log_message(char *topic, byte *payload, unsigned int length);
-bool activatePin(uint8_t pin);
 
-HAMQTTShutterControl::HAMQTTShutterControl(PubSubClient &client, ShutterControlPinsAssignment &pins)
-    : _client(client), _pins(pins)
+HAMQTTShutterControl::HAMQTTShutterControl(PubSubClient &client, CosmoMobilusHardwareAdapter &hardware)
+    : _client(client), _hardware(hardware)
 {
 }
 
@@ -36,11 +34,8 @@ void HAMQTTShutterControl::registerShutter(uint8_t index, HAMQTTShutter *shutter
 
 void HAMQTTShutterControl::begin()
 {
-    pinMode(_pins.pinLeft, OUTPUT);
-    pinMode(_pins.pinRight, OUTPUT);
-    pinMode(_pins.pinUp, OUTPUT);
-    pinMode(_pins.pinDown, OUTPUT);
-    pinMode(_pins.pinStop, OUTPUT);
+    // hardware
+    _hardware.begin();
 
     for (uint8_t i = 0; i < 5; i++)
     {
@@ -144,32 +139,32 @@ void HAMQTTShutterControl::moveToShutterIndex(uint8_t shutterIndex)
 void HAMQTTShutterControl::openAndDelay(uint8_t shutterIndex, uint16_t time)
 {
     // request to open
-    activatePin(_pins.pinUp);
+    _hardware.pressUp();
 
     // main delay
     delay(time);
 
     // stop
-    activatePin(_pins.pinStop);
+    _hardware.pressStop();
 }
 
 void HAMQTTShutterControl::closeAndDelay(uint8_t shutterIndex, uint16_t time)
 {
     // request to close
-    activatePin(_pins.pinDown);
+    _hardware.pressDown();
 
     // wait for required time
     delay(time);
 
     // stop
-    activatePin(_pins.pinStop);
+    _hardware.pressStop();
 }
 
 void HAMQTTShutterControl::moveControlForward(uint8_t p_diff)
 {
     for (uint8_t step = 0; step < p_diff; step++)
     {
-        activatePin(_pins.pinRight);
+        _hardware.pressRight();
     }
 }
 
@@ -179,7 +174,7 @@ void HAMQTTShutterControl::moveControlBackward(uint8_t p_diff)
 {
     for (uint8_t step = 0; step < p_diff; step++)
     {
-        activatePin(_pins.pinLeft);
+        _hardware.pressLeft();
     }
 }
 
@@ -192,16 +187,6 @@ void HAMQTTShutterControl::close(uint8_t shutterIndex)
     // Track passedTime / reuiredTimeToFullyClose * 100%
     //    1. If Stop was not pressed and passedTime / reuiredTimeToFullyClose * 100% > reuiredTimeToFullyClose consider fully closed and publish closed stated
     //    2. If Stop was pressed, calculate the current position passedTime / reuiredTimeToFullyClose * 100% and publish open state and the position
-}
-
-bool activatePin(uint8_t pin)
-{
-    // Activate pin represeting the "Left" button
-    // Deactivate pin represeting the "Left" button
-    // The delay should be very low and adjusted when the real controller will received
-    digitalWrite(pin, HIGH);
-    delay(BUTTON_DELAY);
-    digitalWrite(pin, LOW);
 }
 
 void log_message(char *topic, byte *payload, unsigned int length)

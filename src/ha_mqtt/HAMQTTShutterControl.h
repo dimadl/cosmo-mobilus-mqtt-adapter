@@ -2,27 +2,19 @@
 #define HA_MQTT_SHUTTER_CONTROL_H
 
 #include "HAMQTTShutter.h"
-
-struct ShutterControlPinsAssignment
-{
-    u_int8_t pinLeft;
-    u_int8_t pinRight;
-    u_int8_t pinUp;
-    u_int8_t pinDown;
-    u_int8_t pinStop;
-};
+#include "CosmoMobilusHardwareAdapter.h"
 
 class HAMQTTShutterControl
 {
 public:
-    HAMQTTShutterControl(PubSubClient &client, ShutterControlPinsAssignment &pins);
+    HAMQTTShutterControl(PubSubClient &client, CosmoMobilusHardwareAdapter &hardware);
     void begin();
     void registerShutter(uint8_t index, HAMQTTShutter *shutter);
     void handleCommand(char *topic, byte *payload, unsigned int length);
 
 private:
     PubSubClient &_client;
-    ShutterControlPinsAssignment &_pins;
+    CosmoMobilusHardwareAdapter &_hardware;
 
     HAMQTTShutter *shutters[5] = {nullptr};
     uint8_t latestShutterPositions[5];
