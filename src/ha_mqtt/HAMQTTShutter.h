@@ -10,6 +10,8 @@ public:
     HAMQTTShutter(const char *name, const char *unique_id, PubSubClient &client);
     void begin();
     void setPosition(uint16_t pos);
+    const char *getCommandTopic();
+    const char *getSetPositionTopic();
 
 private:
     const char *name;
@@ -18,11 +20,13 @@ private:
     char commandTopic[100];
     char stateTopic[100];
     char positionTopic[100];
+    char setPositionTopic[100];
 
     const char *discoveryTopicTemplate = "homeassistant/cover/%s/config";
     const char *commandTopicTemplate = "shutter/%s/set";
     const char *stateTopicTemplate = "shutter/%s/state";
     const char *positionTopicTemplate = "shutter/%s/position";
+    const char *setPositionTopicTemplate = "shutter/%s/set-position";
     const char *discoveryPayloadTemplate = "{"
                                            "\"name\":\"%s\","
                                            "\"command_topic\":\"%s\","
@@ -30,6 +34,7 @@ private:
                                            "\"unique_id\":\"%s\","
                                            "\"device_class\":\"shutter\","
                                            "\"position_topic\":\"%s\","
+                                           "\"set_position_topic\": \"%s\","
                                            "\"payload_open\":\"OPEN\","
                                            "\"payload_close\":\"CLOSE\","
                                            "\"payload_stop\":\"STOP\","

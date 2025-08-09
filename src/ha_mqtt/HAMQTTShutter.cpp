@@ -18,6 +18,19 @@ HAMQTTShutter::HAMQTTShutter(const char *name, const char *unique_id, PubSubClie
 
     sprintf(buffer, this->positionTopicTemplate, this->unique_id);
     strncpy(this->positionTopic, buffer, sizeof(this->positionTopic));
+
+    sprintf(buffer, this->setPositionTopicTemplate, this->unique_id);
+    strncpy(this->setPositionTopic, buffer, sizeof(this->setPositionTopic));
+}
+
+const char *HAMQTTShutter::getCommandTopic()
+{
+    return this->commandTopic;
+}
+
+const char *HAMQTTShutter::getSetPositionTopic()
+{
+    return this->setPositionTopic;
 }
 
 void HAMQTTShutter::begin()
@@ -49,7 +62,7 @@ bool HAMQTTShutter::discover()
 
     // Construct discovery payload
     char mqttDiscoveryPayload[500];
-    sprintf(mqttDiscoveryPayload, this->discoveryPayloadTemplate, this->name, this->commandTopic, this->stateTopic, this->unique_id, this->positionTopic);
+    sprintf(mqttDiscoveryPayload, this->discoveryPayloadTemplate, this->name, this->commandTopic, this->stateTopic, this->unique_id, this->positionTopic, this->setPositionTopic);
 
 #if defined(HA_MQTT_DEBUG)
     Serial.println(strlen(mqttDiscoveryPayload));
