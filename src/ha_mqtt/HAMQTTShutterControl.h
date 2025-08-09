@@ -25,14 +25,23 @@ private:
     ShutterControlPinsAssignment &_pins;
 
     HAMQTTShutter *shutters[5] = {nullptr};
+    uint8_t latestShutterPositions[5];
 
     // internal state of the control
-    u_int8_t currentPosition = 1;
+    uint8_t currentPosition = 1;
 
     // Methods
-    void moveControlForward(u_int8_t diff);
-    void moveControlBackward(u_int8_t diff);
-    void close(u_int8_t shutterIndex);
+    void setCurrentPosition(uint8_t currentPosition);
+    uint8_t getCurrentPosition();
+
+    void
+    moveToShutterIndex(uint8_t shutterIndex);
+
+    void openAndDelay(uint8_t shutterIndex, uint16_t time);
+    void closeAndDelay(uint8_t shutterIndex, uint16_t time);
+    void moveControlForward(uint8_t diff);
+    void moveControlBackward(uint8_t diff);
+    void close(uint8_t shutterIndex);
 };
 
 #endif // HA_MQTT_SHUTTER_CONTROL_H

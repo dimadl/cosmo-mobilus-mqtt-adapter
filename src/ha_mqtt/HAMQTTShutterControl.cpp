@@ -5,17 +5,33 @@
 
 #define BUTTON_DELAY 10
 
+#define FULLY_OPENED 100
+
 void log_message(char *topic, byte *payload, unsigned int length);
+bool activatePin(uint8_t pin);
 
 HAMQTTShutterControl::HAMQTTShutterControl(PubSubClient &client, ShutterControlPinsAssignment &pins)
     : _client(client), _pins(pins)
 {
 }
 
+void HAMQTTShutterControl::setCurrentPosition(uint8_t currentPosition)
+{
+    // save to memmemory to make it available after restart
+    this->currentPosition = currentPosition;
+}
+
+uint8_t HAMQTTShutterControl::getCurrentPosition()
+{
+    // retrieve from memmory
+    return this->currentPosition;
+}
+
 void HAMQTTShutterControl::registerShutter(uint8_t index, HAMQTTShutter *shutter)
 {
     // Check if the index is in bound
     this->shutters[index] = shutter;
+    this->latestShutterPositions[index] = FULLY_OPENED;
 }
 
 void HAMQTTShutterControl::begin()
@@ -53,23 +69,6 @@ void HAMQTTShutterControl::handleCommand(char *topic, byte *payload, unsigned in
     {
         if (shutters[shutterIndex] && shutters[shutterIndex]->getCommandTopic() == incomingTopic.c_str())
         {
-            // we know index, but we don't now the current position of the control,
-            // so first we should calculate the position and move the control to this position
-            u_int8_t diff = shutterIndex - currentPosition;
-            if (diff < 0)
-            {
-                // then the control should be moved forfward
-                moveControlForward(diff);
-            }
-            else if (diff > 0)
-            {
-                // then the control should be moved backward
-                moveControlBackward(diff);
-            }
-            else
-            {
-                // stay on the the same position of the control
-            }
 
             if (message == "CLOSE")
             {
@@ -84,36 +83,107 @@ void HAMQTTShutterControl::handleCommand(char *topic, byte *payload, unsigned in
                 // stop();
             }
         }
+        else if (shutters[shutterIndex] && shutters[shutterIndex]->getSetPositionTopic() == incomingTopic.c_str())
+        {
+            // set position of the shutter
+            uint8_t requestedPosition = message.toInt();
+
+            // current - 100
+            // requested - 80
+            // current - requested = 20
+            // ---> need to close shutter by 20%
+
+            // current - 40
+            // requested - 80
+            // current - requeszted = -40
+            // ----> need to open by 40%
+            uint8_t diff = latestShutterPositions[shutterIndex] - requestedPosition;
+            HAMQTTShutter *selectedShutter = shutters[shutterIndex];
+            if (diff < 0)
+            {
+                // open
+                uint16_t delay = abs(diff) * selectedShutter->getTimePerProcent();
+                openAndDelay(shutterIndex, delay);
+            }
+            else if (diff > 0)
+            {
+                // close
+                uint16_t delay = abs(diff) * selectedShutter->getTimePerProcent();
+                closeAndDelay(shutterIndex, delay);
+            }
+            else
+            {
+                // do nothing, stay on the same possition
+            }
+        }
     }
 }
 
-void HAMQTTShutterControl::moveControlForward(u_int8_t diff)
+void HAMQTTShutterControl::moveToShutterIndex(uint8_t shutterIndex)
 {
-    for (uint8_t step = 0; step < abs(diff); step++)
+    // we know index, but we don't now the current position of the control,
+    // so first we should calculate the position and move the control to this position
+    uint8_t diff = shutterIndex - getCurrentPosition();
+    if (diff < 0)
     {
-        // Activate pin represeting the "Right" button
-        // Deactivate pin represeting the "Right" button
-        // The delay should be very low and adjusted when the real controller will received
-        digitalWrite(_pins.pinRight, HIGH);
-        delay(BUTTON_DELAY);
-        digitalWrite(_pins.pinRight, LOW);
+        // then the control should be moved forfward
+        moveControlForward(abs(diff));
     }
+    else if (diff > 0)
+    {
+        // then the control should be moved backward
+        moveControlBackward(abs(diff));
+    }
+    else
+    {
+        // stay on the the same position of the control
+    }
+    setCurrentPosition(shutterIndex);
 }
 
-void HAMQTTShutterControl::moveControlBackward(u_int8_t diff)
+void HAMQTTShutterControl::openAndDelay(uint8_t shutterIndex, uint16_t time)
 {
-    for (uint8_t step = 0; step < abs(diff); step++)
+    // request to open
+    activatePin(_pins.pinUp);
+
+    // main delay
+    delay(time);
+
+    // stop
+    activatePin(_pins.pinStop);
+}
+
+void HAMQTTShutterControl::closeAndDelay(uint8_t shutterIndex, uint16_t time)
+{
+    // request to close
+    activatePin(_pins.pinDown);
+
+    // wait for required time
+    delay(time);
+
+    // stop
+    activatePin(_pins.pinStop);
+}
+
+void HAMQTTShutterControl::moveControlForward(uint8_t p_diff)
+{
+    for (uint8_t step = 0; step < p_diff; step++)
     {
-        // Activate pin represeting the "Left" button
-        // Deactivate pin represeting the "Left" button
-        // The delay should be very low and adjusted when the real controller will received
-        digitalWrite(_pins.pinLeft, HIGH);
-        delay(BUTTON_DELAY);
-        digitalWrite(_pins.pinLeft, LOW);
+        activatePin(_pins.pinRight);
     }
 }
 
-void HAMQTTShutterControl::close(u_int8_t shutterIndex)
+/// @brief
+/// @param p_diff - always positive difference
+void HAMQTTShutterControl::moveControlBackward(uint8_t p_diff)
+{
+    for (uint8_t step = 0; step < p_diff; step++)
+    {
+        activatePin(_pins.pinLeft);
+    }
+}
+
+void HAMQTTShutterControl::close(uint8_t shutterIndex)
 {
     Serial.println("Start shutter closing");
     // This requires calculation of the position based on passed time
@@ -122,6 +192,16 @@ void HAMQTTShutterControl::close(u_int8_t shutterIndex)
     // Track passedTime / reuiredTimeToFullyClose * 100%
     //    1. If Stop was not pressed and passedTime / reuiredTimeToFullyClose * 100% > reuiredTimeToFullyClose consider fully closed and publish closed stated
     //    2. If Stop was pressed, calculate the current position passedTime / reuiredTimeToFullyClose * 100% and publish open state and the position
+}
+
+bool activatePin(uint8_t pin)
+{
+    // Activate pin represeting the "Left" button
+    // Deactivate pin represeting the "Left" button
+    // The delay should be very low and adjusted when the real controller will received
+    digitalWrite(pin, HIGH);
+    delay(BUTTON_DELAY);
+    digitalWrite(pin, LOW);
 }
 
 void log_message(char *topic, byte *payload, unsigned int length)

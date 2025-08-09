@@ -7,15 +7,17 @@
 class HAMQTTShutter
 {
 public:
-    HAMQTTShutter(const char *name, const char *unique_id, PubSubClient &client);
+    HAMQTTShutter(const char *name, const char *unique_id, uint8_t fullTimeToClose, PubSubClient &client);
     void begin();
     void setPosition(uint16_t pos);
     const char *getCommandTopic();
     const char *getSetPositionTopic();
+    uint8_t getTimePerProcent();
 
 private:
     const char *name;
     const char *unique_id;
+    uint8_t movingTimePerProcent;
 
     char commandTopic[100];
     char stateTopic[100];

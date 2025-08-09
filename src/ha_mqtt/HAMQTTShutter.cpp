@@ -4,10 +4,11 @@
 
 #define HA_MQTT_DEBUG
 
-HAMQTTShutter::HAMQTTShutter(const char *name, const char *unique_id, PubSubClient &client) : _client(client)
+HAMQTTShutter::HAMQTTShutter(const char *name, const char *unique_id, uint8_t fullTimeToClose, PubSubClient &client) : _client(client)
 {
     this->name = name;
     this->unique_id = unique_id;
+    this->movingTimePerProcent = fullTimeToClose / 100;
 
     char buffer[100];
     sprintf(buffer, this->commandTopicTemplate, this->unique_id);
@@ -31,6 +32,11 @@ const char *HAMQTTShutter::getCommandTopic()
 const char *HAMQTTShutter::getSetPositionTopic()
 {
     return this->setPositionTopic;
+}
+
+uint8_t HAMQTTShutter::getTimePerProcent()
+{
+    return this->movingTimePerProcent;
 }
 
 void HAMQTTShutter::begin()
