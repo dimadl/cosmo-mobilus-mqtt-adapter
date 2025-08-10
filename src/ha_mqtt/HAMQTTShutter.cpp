@@ -8,35 +8,57 @@ HAMQTTShutter::HAMQTTShutter(const char *name, const char *unique_id, uint8_t fu
 {
     this->name = name;
     this->unique_id = unique_id;
-    this->movingTimePerProcent = fullTimeToClose / 100;
+    this->movingTimePerProcent = double(fullTimeToClose) / 100.0;
 
-    char buffer[100];
+    char buffer[128];
     sprintf(buffer, this->commandTopicTemplate, this->unique_id);
-    strncpy(this->commandTopic, buffer, sizeof(this->commandTopic));
+    this->commandTopic = strdup(buffer);
 
     sprintf(buffer, this->stateTopicTemplate, this->unique_id);
-    strncpy(this->stateTopic, buffer, sizeof(this->stateTopic));
+    this->stateTopic = strdup(buffer);
 
     sprintf(buffer, this->positionTopicTemplate, this->unique_id);
-    strncpy(this->positionTopic, buffer, sizeof(this->positionTopic));
+    this->positionTopic = strdup(buffer);
 
     sprintf(buffer, this->setPositionTopicTemplate, this->unique_id);
-    strncpy(this->setPositionTopic, buffer, sizeof(this->setPositionTopic));
+    this->setPositionTopic = strdup(buffer);
 }
 
-const char *HAMQTTShutter::getCommandTopic()
+const char *HAMQTTShutter::getCommandTopic() const
 {
     return this->commandTopic;
 }
 
 const char *HAMQTTShutter::getSetPositionTopic()
 {
-    return this->setPositionTopic;
+    return setPositionTopic;
 }
 
-uint8_t HAMQTTShutter::getTimePerProcent()
+double HAMQTTShutter::getTimePerProcent()
 {
     return this->movingTimePerProcent;
+}
+
+bool HAMQTTShutter::reportOpening()
+{
+    return _client.publish(stateTopic, "opening", true);
+}
+
+bool HAMQTTShutter::reportClosed()
+{
+    return _client.publish(stateTopic, "closed", true);
+}
+
+bool HAMQTTShutter::reportStopped()
+{
+    return _client.publish(stateTopic, "stopped", true);
+}
+
+bool HAMQTTShutter::reportPosition(uint8_t position)
+{
+    char buffer[10];
+    itoa(position, buffer, 10);
+    return _client.publish(positionTopic, buffer, true);
 }
 
 void HAMQTTShutter::begin()
@@ -44,8 +66,8 @@ void HAMQTTShutter::begin()
     if (discover())
     {
         // Publish initial state
-        _client.publish(stateTopic, "stopped", true);
-        _client.publish(positionTopic, "100", true);
+        reportStopped();
+        reportPosition(100);
     }
     else
     {

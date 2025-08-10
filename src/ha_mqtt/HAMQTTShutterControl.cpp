@@ -78,8 +78,14 @@ void HAMQTTShutterControl::handleCommand(char *topic, byte *payload, unsigned in
                 // stop();
             }
         }
-        else if (shutters[shutterIndex] && shutters[shutterIndex]->getSetPositionTopic() == incomingTopic.c_str())
+        else if (shutters[shutterIndex] && strcmp(shutters[shutterIndex]->getSetPositionTopic(), incomingTopic.c_str()) == 0)
         {
+            moveToShutterIndex(shutterIndex);
+
+            // adding delay between commands
+            delay(500);
+
+            Serial.println("Requested set position");
             // set position of the shutter
             uint8_t requestedPosition = message.toInt();
 
@@ -92,24 +98,35 @@ void HAMQTTShutterControl::handleCommand(char *topic, byte *payload, unsigned in
             // requested - 80
             // current - requeszted = -40
             // ----> need to open by 40%
-            uint8_t diff = latestShutterPositions[shutterIndex] - requestedPosition;
+
             HAMQTTShutter *selectedShutter = shutters[shutterIndex];
+
+            // calculate required delay based on the shutter's speed
+            int8_t diff = latestShutterPositions[shutterIndex] - requestedPosition;
+            Serial.printf("Required shift: %d\n", diff);
+
+            double delay = abs(diff) * selectedShutter->getTimePerProcent();
+            Serial.printf("Calculated delay: %.4f\n", delay);
             if (diff < 0)
             {
                 // open
-                uint16_t delay = abs(diff) * selectedShutter->getTimePerProcent();
+                Serial.printf("Openning shutter: %d\n", shutterIndex);
                 openAndDelay(shutterIndex, delay);
             }
             else if (diff > 0)
             {
                 // close
-                uint16_t delay = abs(diff) * selectedShutter->getTimePerProcent();
+                Serial.printf("Clossing shutter: %d\n", shutterIndex);
                 closeAndDelay(shutterIndex, delay);
             }
             else
             {
                 // do nothing, stay on the same possition
             }
+
+            Serial.printf("Report position: %d\n", requestedPosition);
+            selectedShutter->reportPosition(requestedPosition);
+            latestShutterPositions[shutterIndex] = requestedPosition;
         }
     }
 }
@@ -140,11 +157,13 @@ void HAMQTTShutterControl::openAndDelay(uint8_t shutterIndex, uint16_t time)
 {
     // request to open
     _hardware.pressUp();
+    shutters[shutterIndex]->reportOpening();
 
     // main delay
-    delay(time);
+    delay(time * 1000);
 
     // stop
+    shutters[shutterIndex]->reportStopped();
     _hardware.pressStop();
 }
 
@@ -152,11 +171,13 @@ void HAMQTTShutterControl::closeAndDelay(uint8_t shutterIndex, uint16_t time)
 {
     // request to close
     _hardware.pressDown();
+    shutters[shutterIndex]->reportOpening();
 
     // wait for required time
-    delay(time);
+    delay(time * 1000);
 
     // stop
+    shutters[shutterIndex]->reportStopped();
     _hardware.pressStop();
 }
 

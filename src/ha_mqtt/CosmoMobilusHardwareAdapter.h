@@ -3,7 +3,7 @@
 
 #include <Arduino.h>
 
-#define BUTTON_DELAY 10
+#define BUTTON_DELAY 1000
 
 struct ShutterControlPinsAssignment
 {
@@ -31,4 +31,4 @@ private:
     bool activatePin(uint8_t pin);
 };
 
-#endif // HARDWARE_ADAPTER
+#endif // COSMO_MOBILUS_HARDWARE_ADAPTER

@@ -10,19 +10,25 @@ public:
     HAMQTTShutter(const char *name, const char *unique_id, uint8_t fullTimeToClose, PubSubClient &client);
     void begin();
     void setPosition(uint16_t pos);
-    const char *getCommandTopic();
+    const char *getCommandTopic() const;
     const char *getSetPositionTopic();
-    uint8_t getTimePerProcent();
+    double getTimePerProcent();
+
+    // MQTT reporting
+    bool reportOpening();
+    bool reportClosed();
+    bool reportStopped();
+    bool reportPosition(uint8_t position);
 
 private:
     const char *name;
     const char *unique_id;
-    uint8_t movingTimePerProcent;
+    double movingTimePerProcent;
 
-    char commandTopic[100];
-    char stateTopic[100];
-    char positionTopic[100];
-    char setPositionTopic[100];
+    const char *commandTopic;
+    const char *stateTopic;
+    const char *positionTopic;
+    const char *setPositionTopic;
 
     const char *discoveryTopicTemplate = "homeassistant/cover/%s/config";
     const char *commandTopicTemplate = "shutter/%s/set";
