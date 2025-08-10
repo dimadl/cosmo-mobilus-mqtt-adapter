@@ -83,7 +83,7 @@ void HAMQTTShutterControl::handleCommand(char *topic, byte *payload, unsigned in
             moveToShutterIndex(shutterIndex);
 
             // adding delay between commands
-            delay(500);
+            delay(1000);
 
             Serial.println("Requested set position");
             // set position of the shutter
@@ -135,7 +135,12 @@ void HAMQTTShutterControl::moveToShutterIndex(uint8_t shutterIndex)
 {
     // we know index, but we don't now the current position of the control,
     // so first we should calculate the position and move the control to this position
-    uint8_t diff = shutterIndex - getCurrentPosition();
+    Serial.printf("Checking if control movement required to reach %d\n", shutterIndex);
+    Serial.printf("Current position is %d\n", getCurrentPosition());
+
+    int8_t diff = shutterIndex - getCurrentPosition();
+
+    Serial.printf("Diff for control %d\n", diff);
     if (diff < 0)
     {
         // then the control should be moved forfward

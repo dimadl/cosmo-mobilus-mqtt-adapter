@@ -20,7 +20,7 @@ private:
     uint8_t latestShutterPositions[5];
 
     // internal state of the control
-    uint8_t currentPosition = 1;
+    uint8_t currentPosition = 0;
 
     // Methods
     void setCurrentPosition(uint8_t currentPosition);
