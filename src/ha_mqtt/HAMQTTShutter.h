@@ -15,6 +15,11 @@ public:
     double getTimePerProcent();
 
     // MQTT reporting
+    // availability
+    bool reportAvailable();
+    bool reportUnavailable();
+
+    // state
     bool reportOpening();
     bool reportClosed();
     bool reportStopped();
@@ -29,12 +34,14 @@ private:
     const char *stateTopic;
     const char *positionTopic;
     const char *setPositionTopic;
+    const char *availabilityTopic;
 
     const char *discoveryTopicTemplate = "homeassistant/cover/%s/config";
     const char *commandTopicTemplate = "shutter/%s/set";
     const char *stateTopicTemplate = "shutter/%s/state";
     const char *positionTopicTemplate = "shutter/%s/position";
     const char *setPositionTopicTemplate = "shutter/%s/set-position";
+    const char *availabilityTopicTemplate = "shutter/%s/availability";
     const char *discoveryPayloadTemplate = "{"
                                            "\"name\":\"%s\","
                                            "\"command_topic\":\"%s\","
@@ -48,7 +55,8 @@ private:
                                            "\"payload_stop\":\"STOP\","
                                            "\"state_opening\":\"opening\","
                                            "\"state_closed\":\"closed\","
-                                           "\"state_stopped\":\"stopped\""
+                                           "\"state_stopped\":\"stopped\","
+                                           "\"availability\":{\"topic\":\"%s\"}"
                                            "}";
     PubSubClient &_client;
 

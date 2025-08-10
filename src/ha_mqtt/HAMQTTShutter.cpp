@@ -22,6 +22,9 @@ HAMQTTShutter::HAMQTTShutter(const char *name, const char *unique_id, uint8_t fu
 
     sprintf(buffer, this->setPositionTopicTemplate, this->unique_id);
     this->setPositionTopic = strdup(buffer);
+
+    sprintf(buffer, this->availabilityTopicTemplate, this->unique_id);
+    this->availabilityTopic = strdup(buffer);
 }
 
 const char *HAMQTTShutter::getCommandTopic() const
@@ -37,6 +40,16 @@ const char *HAMQTTShutter::getSetPositionTopic()
 double HAMQTTShutter::getTimePerProcent()
 {
     return this->movingTimePerProcent;
+}
+
+bool HAMQTTShutter::reportAvailable()
+{
+    return _client.publish(availabilityTopic, "online", true);
+}
+
+bool HAMQTTShutter::reportUnavailable()
+{
+    return _client.publish(availabilityTopic, "offline", true);
 }
 
 bool HAMQTTShutter::reportOpening()
@@ -66,6 +79,7 @@ void HAMQTTShutter::begin()
     if (discover())
     {
         // Publish initial state
+        reportAvailable();
         reportStopped();
         reportPosition(100);
     }
@@ -89,8 +103,8 @@ bool HAMQTTShutter::discover()
 #endif
 
     // Construct discovery payload
-    char mqttDiscoveryPayload[500];
-    sprintf(mqttDiscoveryPayload, this->discoveryPayloadTemplate, this->name, this->commandTopic, this->stateTopic, this->unique_id, this->positionTopic, this->setPositionTopic);
+    char mqttDiscoveryPayload[1024];
+    sprintf(mqttDiscoveryPayload, this->discoveryPayloadTemplate, this->name, this->commandTopic, this->stateTopic, this->unique_id, this->positionTopic, this->setPositionTopic, this->availabilityTopic);
 
 #if defined(HA_MQTT_DEBUG)
     Serial.println(strlen(mqttDiscoveryPayload));
