@@ -19,8 +19,10 @@ public:
     bool reportUnavailable();
 
     // state
+    bool reportOpened();
     bool reportOpening();
     bool reportClosed();
+    bool reportClosing();
     bool reportStopped();
     bool reportPosition(uint8_t position);
 
@@ -52,7 +54,9 @@ private:
                                            "\"payload_open\":\"OPEN\","
                                            "\"payload_close\":\"CLOSE\","
                                            "\"payload_stop\":\"STOP\","
+                                           "\"state_open\":\"opened\","
                                            "\"state_opening\":\"opening\","
+                                           "\"state_closing\":\"closing\","
                                            "\"state_closed\":\"closed\","
                                            "\"state_stopped\":\"stopped\","
                                            "\"availability\":{\"topic\":\"%s\"}"

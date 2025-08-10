@@ -57,6 +57,16 @@ bool HAMQTTShutter::reportOpening()
     return _client.publish(stateTopic, "opening", true);
 }
 
+bool HAMQTTShutter::reportOpened()
+{
+    return _client.publish(stateTopic, "opened", true);
+}
+
+bool HAMQTTShutter::reportClosing()
+{
+    return _client.publish(stateTopic, "closing", true);
+}
+
 bool HAMQTTShutter::reportClosed()
 {
     return _client.publish(stateTopic, "closed", true);

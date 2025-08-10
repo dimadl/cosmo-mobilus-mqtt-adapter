@@ -5,6 +5,7 @@
 #include "HAMQTTShutterControl.h"
 
 #define FULLY_OPENED 100
+#define FULLY_CLOSED 0
 
 void log_message(char *topic, byte *payload, unsigned int length);
 
@@ -125,6 +126,12 @@ void HAMQTTShutterControl::handleCommand(char *topic, byte *payload, unsigned in
             }
 
             Serial.printf("Report position: %d\n", requestedPosition);
+
+            if (requestedPosition == FULLY_CLOSED)
+            {
+                selectedShutter->reportClosed();
+            }
+
             selectedShutter->reportPosition(requestedPosition);
             latestShutterPositions[shutterIndex] = requestedPosition;
         }
@@ -170,12 +177,13 @@ void HAMQTTShutterControl::openAndDelay(HAMQTTShutter *shutter, uint16_t time)
     // stop
     _hardware.pressStop();
     shutter->reportStopped();
+    shutter->reportOpened();
 }
 
 void HAMQTTShutterControl::closeAndDelay(HAMQTTShutter *shutter, uint16_t time)
 {
     // request to close
-    shutter->reportOpening();
+    shutter->reportClosing();
     _hardware.pressDown();
 
     // wait for required time
