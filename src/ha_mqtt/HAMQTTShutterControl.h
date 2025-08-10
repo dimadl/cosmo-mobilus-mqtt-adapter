@@ -29,11 +29,11 @@ private:
     void
     moveToShutterIndex(uint8_t shutterIndex);
 
-    void openAndDelay(uint8_t shutterIndex, uint16_t time);
-    void closeAndDelay(uint8_t shutterIndex, uint16_t time);
+    void openAndDelay(HAMQTTShutter *shutter, uint16_t time);
+    void closeAndDelay(HAMQTTShutter *shutter, uint16_t time);
     void moveControlForward(uint8_t diff);
     void moveControlBackward(uint8_t diff);
-    void close(uint8_t shutterIndex);
+    void close(HAMQTTShutter *shutter);
 };
 
 #endif // HA_MQTT_SHUTTER_CONTROL_H

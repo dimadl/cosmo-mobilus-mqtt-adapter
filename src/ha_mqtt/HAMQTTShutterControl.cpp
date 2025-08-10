@@ -67,7 +67,7 @@ void HAMQTTShutterControl::handleCommand(char *topic, byte *payload, unsigned in
 
             if (message == "CLOSE")
             {
-                close(shutterIndex);
+                close(shutters[shutterIndex]);
             }
             else if (message == "OPEN")
             {
@@ -111,13 +111,13 @@ void HAMQTTShutterControl::handleCommand(char *topic, byte *payload, unsigned in
             {
                 // open
                 Serial.printf("Openning shutter: %d\n", shutterIndex);
-                openAndDelay(shutterIndex, delay);
+                openAndDelay(selectedShutter, delay);
             }
             else if (diff > 0)
             {
                 // close
                 Serial.printf("Clossing shutter: %d\n", shutterIndex);
-                closeAndDelay(shutterIndex, delay);
+                closeAndDelay(selectedShutter, delay);
             }
             else
             {
@@ -158,32 +158,32 @@ void HAMQTTShutterControl::moveToShutterIndex(uint8_t shutterIndex)
     setCurrentPosition(shutterIndex);
 }
 
-void HAMQTTShutterControl::openAndDelay(uint8_t shutterIndex, uint16_t time)
+void HAMQTTShutterControl::openAndDelay(HAMQTTShutter *shutter, uint16_t time)
 {
     // request to open
+    shutter->reportOpening();
     _hardware.pressUp();
-    shutters[shutterIndex]->reportOpening();
 
     // main delay
     delay(time * 1000);
 
     // stop
-    shutters[shutterIndex]->reportStopped();
     _hardware.pressStop();
+    shutter->reportStopped();
 }
 
-void HAMQTTShutterControl::closeAndDelay(uint8_t shutterIndex, uint16_t time)
+void HAMQTTShutterControl::closeAndDelay(HAMQTTShutter *shutter, uint16_t time)
 {
     // request to close
+    shutter->reportOpening();
     _hardware.pressDown();
-    shutters[shutterIndex]->reportOpening();
 
     // wait for required time
     delay(time * 1000);
 
     // stop
-    shutters[shutterIndex]->reportStopped();
     _hardware.pressStop();
+    shutter->reportStopped();
 }
 
 void HAMQTTShutterControl::moveControlForward(uint8_t p_diff)
@@ -204,7 +204,7 @@ void HAMQTTShutterControl::moveControlBackward(uint8_t p_diff)
     }
 }
 
-void HAMQTTShutterControl::close(uint8_t shutterIndex)
+void HAMQTTShutterControl::close(HAMQTTShutter *shutter)
 {
     Serial.println("Start shutter closing");
     // This requires calculation of the position based on passed time
