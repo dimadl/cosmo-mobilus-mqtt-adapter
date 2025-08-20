@@ -4,6 +4,12 @@
 #include "HAMQTTShutter.h"
 #include "CosmoMobilusHardwareAdapter.h"
 
+#define FULLY_OPENED 100
+#define FULLY_CLOSED 0
+
+#define EEPROM_SIZE 8
+#define ADDRESS_POSITION 8
+
 class HAMQTTShutterControl
 {
 public:
@@ -16,11 +22,11 @@ private:
     PubSubClient &_client;
     CosmoMobilusHardwareAdapter &_hardware;
 
-    HAMQTTShutter *shutters[7] = {nullptr};
-    uint8_t latestShutterPositions[7];
+    HAMQTTShutter *shutters[8] = {nullptr};
+    uint8_t latestShutterPositions[8];
 
     // internal state of the control
-    uint8_t currentPosition = 0;
+    uint8_t currentPosition;
 
     // Methods
     void setCurrentPosition(uint8_t currentPosition);

@@ -42,10 +42,11 @@ bool CosmoMobilusHardwareAdapter::activatePin(uint8_t pin)
 {
     // Activate pin represeting the "Left" button
     // Deactivate pin represeting the "Left" button
-    // The delay should be very low and adjusted when the real controller will received
+    // The delay should be very low and adjusted based on the real controller
     digitalWrite(pin, HIGH);
     delay(BUTTON_DELAY);
     digitalWrite(pin, LOW);
+    delay(BUTTON_DELAY);
 
     return true;
 }

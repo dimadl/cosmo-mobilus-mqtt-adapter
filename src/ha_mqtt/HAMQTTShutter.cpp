@@ -91,7 +91,6 @@ void HAMQTTShutter::begin()
         // Publish initial state
         reportAvailable();
         reportStopped();
-        reportPosition(100);
     }
     else
     {

@@ -4,8 +4,7 @@
 #include "HAMQTTShutter.h"
 #include "HAMQTTShutterControl.h"
 
-#define FULLY_OPENED 100
-#define FULLY_CLOSED 0
+#include <EEPROM.h>
 
 void log_message(char *topic, byte *payload, unsigned int length);
 
@@ -17,6 +16,9 @@ HAMQTTShutterControl::HAMQTTShutterControl(PubSubClient &client, CosmoMobilusHar
 void HAMQTTShutterControl::setCurrentPosition(uint8_t currentPosition)
 {
     // save to memmemory to make it available after restart
+    EEPROM.write(ADDRESS_POSITION, currentPosition);
+    EEPROM.commit();
+    Serial.printf("Saving the current position to the memmory %d\n", currentPosition);
     this->currentPosition = currentPosition;
 }
 
@@ -30,19 +32,29 @@ void HAMQTTShutterControl::registerShutter(uint8_t index, HAMQTTShutter *shutter
 {
     // Check if the index is in bound
     this->shutters[index] = shutter;
-    this->latestShutterPositions[index] = FULLY_OPENED;
+
+    // read state from memomory memmory
+    uint8_t memShutterPosition = EEPROM.read(index);
+    this->latestShutterPositions[index] = memShutterPosition == 255 ? FULLY_OPENED : memShutterPosition;
+
+    Serial.printf("Read the latest position of shutter %d from memmory: %d\n", index, memShutterPosition);
 }
 
 void HAMQTTShutterControl::begin()
 {
+    int8_t memCurrentControlPosition = EEPROM.read(ADDRESS_POSITION);
+    this->currentPosition = memCurrentControlPosition == 255 ? 0 : memCurrentControlPosition;
+    Serial.printf("Read the current contorl position from memmory: %d\n", memCurrentControlPosition);
+
     // hardware
     _hardware.begin();
 
-    for (uint8_t i = 0; i < 7; i++)
+    for (uint8_t i = 0; i < 8; i++)
     {
         if (shutters[i])
         {
             shutters[i]->begin();
+            shutters[i]->reportPosition(this->latestShutterPositions[i]);
             _client.subscribe(shutters[i]->getCommandTopic());
             _client.subscribe(shutters[i]->getSetPositionTopic());
         }
@@ -61,7 +73,7 @@ void HAMQTTShutterControl::handleCommand(char *topic, byte *payload, unsigned in
     }
     message.trim();
 
-    for (uint8_t shutterIndex = 0; shutterIndex < 7; shutterIndex++)
+    for (uint8_t shutterIndex = 0; shutterIndex < 8; shutterIndex++)
     {
         if (shutters[shutterIndex] && shutters[shutterIndex]->getCommandTopic() == incomingTopic.c_str())
         {
@@ -84,7 +96,7 @@ void HAMQTTShutterControl::handleCommand(char *topic, byte *payload, unsigned in
             moveToShutterIndex(shutterIndex);
 
             // adding delay between commands
-            delay(1000);
+            delay(500);
 
             Serial.println("Requested set position");
             // set position of the shutter
@@ -134,6 +146,9 @@ void HAMQTTShutterControl::handleCommand(char *topic, byte *payload, unsigned in
 
             selectedShutter->reportPosition(requestedPosition);
             latestShutterPositions[shutterIndex] = requestedPosition;
+            EEPROM.write(shutterIndex, requestedPosition);
+            EEPROM.commit();
+            Serial.printf("Saving the latest position of shutter %d to memmory: %d\n", shutterIndex, requestedPosition);
         }
     }
 }
