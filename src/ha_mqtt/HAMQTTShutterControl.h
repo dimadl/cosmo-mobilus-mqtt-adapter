@@ -16,8 +16,8 @@ private:
     PubSubClient &_client;
     CosmoMobilusHardwareAdapter &_hardware;
 
-    HAMQTTShutter *shutters[5] = {nullptr};
-    uint8_t latestShutterPositions[5];
+    HAMQTTShutter *shutters[7] = {nullptr};
+    uint8_t latestShutterPositions[7];
 
     // internal state of the control
     uint8_t currentPosition = 0;

@@ -3,7 +3,7 @@
 
 #include <Arduino.h>
 
-#define BUTTON_DELAY 1000
+#define BUTTON_DELAY 500
 
 struct ShutterControlPinsAssignment
 {

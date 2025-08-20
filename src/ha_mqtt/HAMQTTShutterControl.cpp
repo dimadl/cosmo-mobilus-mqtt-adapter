@@ -38,7 +38,7 @@ void HAMQTTShutterControl::begin()
     // hardware
     _hardware.begin();
 
-    for (uint8_t i = 0; i < 5; i++)
+    for (uint8_t i = 0; i < 7; i++)
     {
         if (shutters[i])
         {
@@ -61,7 +61,7 @@ void HAMQTTShutterControl::handleCommand(char *topic, byte *payload, unsigned in
     }
     message.trim();
 
-    for (uint8_t shutterIndex = 0; shutterIndex < 5; shutterIndex++)
+    for (uint8_t shutterIndex = 0; shutterIndex < 7; shutterIndex++)
     {
         if (shutters[shutterIndex] && shutters[shutterIndex]->getCommandTopic() == incomingTopic.c_str())
         {
@@ -148,12 +148,12 @@ void HAMQTTShutterControl::moveToShutterIndex(uint8_t shutterIndex)
     int8_t diff = shutterIndex - getCurrentPosition();
 
     Serial.printf("Diff for control %d\n", diff);
-    if (diff < 0)
+    if (diff > 0)
     {
         // then the control should be moved forfward
         moveControlForward(abs(diff));
     }
-    else if (diff > 0)
+    else if (diff < 0)
     {
         // then the control should be moved backward
         moveControlBackward(abs(diff));
@@ -199,6 +199,7 @@ void HAMQTTShutterControl::moveControlForward(uint8_t p_diff)
     for (uint8_t step = 0; step < p_diff; step++)
     {
         _hardware.pressRight();
+        delay(500);
     }
 }
 
@@ -209,6 +210,7 @@ void HAMQTTShutterControl::moveControlBackward(uint8_t p_diff)
     for (uint8_t step = 0; step < p_diff; step++)
     {
         _hardware.pressLeft();
+        delay(500);
     }
 }
 
