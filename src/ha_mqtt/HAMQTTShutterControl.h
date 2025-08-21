@@ -13,7 +13,10 @@
 
 class HAMQTTShutterControl
 {
+
 public:
+    static HAMQTTShutterControl *instance;
+
     HAMQTTShutterControl(MQTTClient &client, CosmoMobilusHardwareAdapter &hardware);
     void begin();
     void registerShutter(uint8_t index, HAMQTTShutter *shutter);
@@ -22,6 +25,8 @@ public:
 private:
     MQTTClient &_client;
     CosmoMobilusHardwareAdapter &_hardware;
+
+    const char *topic_ha_status = "homeassistant/status";
 
     HAMQTTShutter *shutters[8] = {nullptr};
     uint8_t latestShutterPositions[8];
@@ -33,8 +38,7 @@ private:
     void setCurrentPosition(uint8_t currentPosition);
     uint8_t getCurrentPosition();
 
-    void
-    moveToShutterIndex(uint8_t shutterIndex);
+    void moveToShutterIndex(uint8_t shutterIndex);
 
     void openAndDelay(HAMQTTShutter *shutter, uint16_t time);
     void closeAndDelay(HAMQTTShutter *shutter, uint16_t time);

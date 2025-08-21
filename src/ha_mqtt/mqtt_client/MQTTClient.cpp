@@ -1,9 +1,13 @@
 #include "MQTTClient.h"
 
-MQTTClient::MQTTClient(PubSubClient &client, const char *mqtt_username, const char *mqtt_password) : _client(client)
+MQTTClient::MQTTClient(const char *ssid, const char *password, const char *mqtt_broker, uint16_t mqtt_port, const char *mqtt_username, const char *mqtt_password) : wifiClient(), _client(wifiClient)
 {
     this->mqtt_username = mqtt_username;
     this->mqtt_password = mqtt_password;
+    this->mqtt_broker = mqtt_broker;
+    this->mqtt_port = mqtt_port;
+    this->ssid = ssid;
+    this->password = password;
 }
 
 boolean MQTTClient::connect()
@@ -25,9 +29,9 @@ boolean MQTTClient::connect()
     }
 
     Serial.println("Checking if PubSub is connected");
-    while (!_client.connected())
+    while (!this->_client.connected())
     {
-        String client_id = "esp32-client-";
+        String client_id = "esp32-client-1";
         client_id += String(WiFi.macAddress());
         Serial.printf("The client %s connects to the public MQTT broker\n", client_id.c_str());
         if (_client.connect(client_id.c_str(), mqtt_username, mqtt_password))
@@ -67,6 +71,20 @@ boolean MQTTClient::subscribe(const char *topic)
     return false;
 }
 
+void MQTTClient::begin()
+{
+    // Connecting to a WiFi network
+    Serial.printf("Connecting to Wifi Network %s\n", this->ssid);
+    WiFi.begin(this->ssid, this->password);
+    while (WiFi.status() != WL_CONNECTED)
+    {
+        delay(500);
+        Serial.print("Connecting to WiFi...");
+    }
+    Serial.println("WiFi connected");
+    this->_client.setServer(mqtt_broker, mqtt_port).setBufferSize(MQTT_MESSAGE_BUFFER);
+}
+
 boolean MQTTClient::publish(const char *topic, const char *payload, boolean retained)
 {
     uint8_t tries = 0;
@@ -85,4 +103,14 @@ boolean MQTTClient::publish(const char *topic, const char *payload, boolean reta
     }
 
     return true;
+}
+
+void MQTTClient::setCallback(MQTT_CALLBACK_SIGNATURE)
+{
+    this->_client.setCallback(callback);
+}
+
+boolean MQTTClient::loop()
+{
+    return this->_client.loop();
 }

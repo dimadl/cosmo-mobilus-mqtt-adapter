@@ -6,11 +6,16 @@
 
 #include <EEPROM.h>
 
+HAMQTTShutterControl *HAMQTTShutterControl::instance = nullptr;
+
 void log_message(char *topic, byte *payload, unsigned int length);
+void mqttCallback(char *topic, byte *payload, unsigned int length);
 
 HAMQTTShutterControl::HAMQTTShutterControl(MQTTClient &client, CosmoMobilusHardwareAdapter &hardware)
     : _client(client), _hardware(hardware)
 {
+    instance = this;
+    // this->_client.setCallback(mqttCallback);
 }
 
 void HAMQTTShutterControl::setCurrentPosition(uint8_t currentPosition)
@@ -45,6 +50,10 @@ void HAMQTTShutterControl::begin()
     int8_t memCurrentControlPosition = EEPROM.read(ADDRESS_POSITION);
     this->currentPosition = memCurrentControlPosition == 255 ? 0 : memCurrentControlPosition;
     Serial.printf("Read the current contorl position from memmory: %d\n", memCurrentControlPosition);
+
+    this->_client.begin();
+    this->_client.setCallback(mqttCallback);
+    this->_client.subscribe(topic_ha_status);
 
     // hardware
     _hardware.begin();
@@ -238,6 +247,14 @@ void HAMQTTShutterControl::close(HAMQTTShutter *shutter)
     // Track passedTime / reuiredTimeToFullyClose * 100%
     //    1. If Stop was not pressed and passedTime / reuiredTimeToFullyClose * 100% > reuiredTimeToFullyClose consider fully closed and publish closed stated
     //    2. If Stop was pressed, calculate the current position passedTime / reuiredTimeToFullyClose * 100% and publish open state and the position
+}
+
+void mqttCallback(char *topic, byte *payload, unsigned int length)
+{
+    if (HAMQTTShutterControl::instance)
+    {
+        HAMQTTShutterControl::instance->handleCommand(topic, payload, length);
+    }
 }
 
 void log_message(char *topic, byte *payload, unsigned int length)
