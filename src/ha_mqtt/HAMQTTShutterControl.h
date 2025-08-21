@@ -3,6 +3,7 @@
 
 #include "HAMQTTShutter.h"
 #include "CosmoMobilusHardwareAdapter.h"
+#include "./mqtt_client/MQTTClient.h"
 
 #define FULLY_OPENED 100
 #define FULLY_CLOSED 0
@@ -13,13 +14,13 @@
 class HAMQTTShutterControl
 {
 public:
-    HAMQTTShutterControl(PubSubClient &client, CosmoMobilusHardwareAdapter &hardware);
+    HAMQTTShutterControl(MQTTClient &client, CosmoMobilusHardwareAdapter &hardware);
     void begin();
     void registerShutter(uint8_t index, HAMQTTShutter *shutter);
     void handleCommand(char *topic, byte *payload, unsigned int length);
 
 private:
-    PubSubClient &_client;
+    MQTTClient &_client;
     CosmoMobilusHardwareAdapter &_hardware;
 
     HAMQTTShutter *shutters[8] = {nullptr};

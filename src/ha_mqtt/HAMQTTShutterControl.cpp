@@ -8,7 +8,7 @@
 
 void log_message(char *topic, byte *payload, unsigned int length);
 
-HAMQTTShutterControl::HAMQTTShutterControl(PubSubClient &client, CosmoMobilusHardwareAdapter &hardware)
+HAMQTTShutterControl::HAMQTTShutterControl(MQTTClient &client, CosmoMobilusHardwareAdapter &hardware)
     : _client(client), _hardware(hardware)
 {
 }

@@ -3,11 +3,12 @@
 
 #include <Arduino.h>
 #include <PubSubClient.h>
+#include "./mqtt_client/MQTTClient.h"
 
 class HAMQTTShutter
 {
 public:
-    HAMQTTShutter(const char *name, const char *unique_id, uint8_t fullTimeToClose, PubSubClient &client);
+    HAMQTTShutter(const char *name, const char *unique_id, uint8_t fullTimeToClose, MQTTClient &client);
     void begin();
     const char *getCommandTopic() const;
     const char *getSetPositionTopic();
@@ -61,7 +62,7 @@ private:
                                            "\"state_stopped\":\"stopped\","
                                            "\"availability\":{\"topic\":\"%s\"}"
                                            "}";
-    PubSubClient &_client;
+    MQTTClient &_client;
 
     bool discover();
 };

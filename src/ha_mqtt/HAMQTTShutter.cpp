@@ -4,7 +4,7 @@
 
 #define HA_MQTT_DEBUG
 
-HAMQTTShutter::HAMQTTShutter(const char *name, const char *unique_id, uint8_t fullTimeToClose, PubSubClient &client) : _client(client)
+HAMQTTShutter::HAMQTTShutter(const char *name, const char *unique_id, uint8_t fullTimeToClose, MQTTClient &client) : _client(client)
 {
     this->name = name;
     this->unique_id = unique_id;
