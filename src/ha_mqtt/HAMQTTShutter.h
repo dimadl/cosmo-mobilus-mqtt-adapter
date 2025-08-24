@@ -5,6 +5,8 @@
 #include <PubSubClient.h>
 #include "./mqtt_client/MQTTClient.h"
 
+#define HA_MQTT_SHUTTER_DEBUG
+
 class HAMQTTShutter
 {
 public:

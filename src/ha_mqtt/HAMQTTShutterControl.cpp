@@ -10,12 +10,12 @@ HAMQTTShutterControl *HAMQTTShutterControl::instance = nullptr;
 
 void log_message(char *topic, byte *payload, unsigned int length);
 void mqttCallback(char *topic, byte *payload, unsigned int length);
+void mqttReconnectionCallBack();
 
 HAMQTTShutterControl::HAMQTTShutterControl(MQTTClient &client, CosmoMobilusHardwareAdapter &hardware)
     : _client(client), _hardware(hardware)
 {
     instance = this;
-    // this->_client.setCallback(mqttCallback);
 }
 
 void HAMQTTShutterControl::setCurrentPosition(uint8_t currentPosition)
@@ -31,6 +31,25 @@ uint8_t HAMQTTShutterControl::getCurrentPosition()
 {
     // retrieve from memmory
     return this->currentPosition;
+}
+
+void HAMQTTShutterControl::initConnection()
+{
+    this->_client.subscribe(topic_ha_status);
+
+    // hardware
+    _hardware.begin();
+
+    for (uint8_t i = 0; i < 8; i++)
+    {
+        if (shutters[i])
+        {
+            shutters[i]->begin();
+            shutters[i]->reportPosition(this->latestShutterPositions[i]);
+            _client.subscribe(shutters[i]->getCommandTopic());
+            _client.subscribe(shutters[i]->getSetPositionTopic());
+        }
+    }
 }
 
 void HAMQTTShutterControl::registerShutter(uint8_t index, HAMQTTShutter *shutter)
@@ -52,22 +71,10 @@ void HAMQTTShutterControl::begin()
     Serial.printf("Read the current contorl position from memmory: %d\n", memCurrentControlPosition);
 
     this->_client.begin();
+    this->_client.setReconnectionCallback(mqttReconnectionCallBack);
     this->_client.setCallback(mqttCallback);
-    this->_client.subscribe(topic_ha_status);
 
-    // hardware
-    _hardware.begin();
-
-    for (uint8_t i = 0; i < 8; i++)
-    {
-        if (shutters[i])
-        {
-            shutters[i]->begin();
-            shutters[i]->reportPosition(this->latestShutterPositions[i]);
-            _client.subscribe(shutters[i]->getCommandTopic());
-            _client.subscribe(shutters[i]->getSetPositionTopic());
-        }
-    }
+    initConnection();
 }
 
 void HAMQTTShutterControl::handleCommand(char *topic, byte *payload, unsigned int length)
@@ -127,7 +134,10 @@ void HAMQTTShutterControl::handleCommand(char *topic, byte *payload, unsigned in
             int8_t diff = latestShutterPositions[shutterIndex] - requestedPosition;
             Serial.printf("Required shift: %d\n", diff);
 
-            double delay = abs(diff) * selectedShutter->getTimePerProcent();
+            // add coefficient to erase the inaccuracy
+            uint16_t coefficient = (requestedPosition == FULLY_CLOSED) || (requestedPosition == FULLY_OPENED) ? 1 : 0;
+
+            double delay = abs(diff) * selectedShutter->getTimePerProcent() + coefficient;
             Serial.printf("Calculated delay: %.4f\n", delay);
             if (diff < 0)
             {
@@ -254,6 +264,14 @@ void mqttCallback(char *topic, byte *payload, unsigned int length)
     if (HAMQTTShutterControl::instance)
     {
         HAMQTTShutterControl::instance->handleCommand(topic, payload, length);
+    }
+}
+
+void mqttReconnectionCallBack()
+{
+    if (HAMQTTShutterControl::instance)
+    {
+        HAMQTTShutterControl::instance->initConnection();
     }
 }
 

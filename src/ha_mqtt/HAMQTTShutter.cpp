@@ -2,8 +2,6 @@
 #include "HAMQTTShutter.h"
 #include <PubSubClient.h>
 
-#define HA_MQTT_DEBUG
-
 HAMQTTShutter::HAMQTTShutter(const char *name, const char *unique_id, uint8_t fullTimeToClose, MQTTClient &client) : _client(client)
 {
     this->name = name;
@@ -95,7 +93,7 @@ void HAMQTTShutter::begin()
     else
     {
 
-#if defined(HA_MQTT_DEBUG)
+#if defined(HA_MQTT_SHUTTER_DEBUG)
         Serial.println("Discovery failed. Couldn't send a state");
 #endif
     }
@@ -107,7 +105,7 @@ bool HAMQTTShutter::discover()
     char discoveryTopic[50];
     sprintf(discoveryTopic, this->discoveryTopicTemplate, unique_id);
 
-#if defined(HA_MQTT_DEBUG)
+#if defined(HA_MQTT_SHUTTER_DEBUG)
     Serial.println(discoveryTopic);
 #endif
 
@@ -115,7 +113,7 @@ bool HAMQTTShutter::discover()
     char mqttDiscoveryPayload[1024];
     sprintf(mqttDiscoveryPayload, this->discoveryPayloadTemplate, this->name, this->commandTopic, this->stateTopic, this->unique_id, this->positionTopic, this->setPositionTopic, this->availabilityTopic);
 
-#if defined(HA_MQTT_DEBUG)
+#if defined(HA_MQTT_SHUTTER_DEBUG)
     Serial.println(strlen(mqttDiscoveryPayload));
 #endif
 

@@ -21,6 +21,7 @@ public:
     void begin();
     void registerShutter(uint8_t index, HAMQTTShutter *shutter);
     void handleCommand(char *topic, byte *payload, unsigned int length);
+    void initConnection();
 
 private:
     MQTTClient &_client;

@@ -8,14 +8,20 @@ MQTTClient::MQTTClient(const char *ssid, const char *password, const char *mqtt_
     this->mqtt_port = mqtt_port;
     this->ssid = ssid;
     this->password = password;
+
+    this->feedback = MQTTClientFeedback();
 }
 
 boolean MQTTClient::connect()
 {
+    this->feedback.pubSubStatusReset();
+    this->feedback.wifiStatusReset();
+
     uint8_t tries = 0;
     Serial.println("Checking if WiFi is connected");
     while (!WiFi.isConnected())
     {
+        this->feedback.wifiConnectionStarted();
         tries++;
         if (tries > MQTT_CLIENT_MAX_RETRIES)
         {
@@ -26,11 +32,18 @@ boolean MQTTClient::connect()
 
         delay(500);
         Serial.println("Reconnecting to WiFi..");
+        this->feedback.wifiConnectionIterationCompleted();
     }
+
+    // "Wifi connection" is successful
+    this->feedback.wifiConnectionSuccess();
 
     Serial.println("Checking if PubSub is connected");
     while (!this->_client.connected())
     {
+        // "PubSub connection" started
+        this->feedback.pubSubCOnnectionStarted();
+
         String client_id = "esp32-client-1";
         client_id += String(WiFi.macAddress());
         Serial.printf("The client %s connects to the public MQTT broker\n", client_id.c_str());
@@ -44,7 +57,10 @@ boolean MQTTClient::connect()
             Serial.print(_client.state());
             delay(2000);
         }
+        this->feedback.pubSubConnectionIterationCompleted();
     }
+
+    this->feedback.pubSubConnectionSuccess();
 
     Serial.println("Connection is OK. Proceed.");
     return true;
@@ -52,6 +68,8 @@ boolean MQTTClient::connect()
 
 boolean MQTTClient::subscribe(const char *topic)
 {
+    this->feedback.pubSubTransferStarted();
+
     Serial.printf("Subscribing on topic %s\n", topic);
     uint8_t tries = 0;
 
@@ -68,11 +86,15 @@ boolean MQTTClient::subscribe(const char *topic)
         this->subscribe(topic);
     }
 
+    this->feedback.pubSubTransferCompleted();
+
     return false;
 }
 
 void MQTTClient::begin()
 {
+    this->feedback.begin();
+
     // Connecting to a WiFi network
     Serial.printf("Connecting to Wifi Network %s\n", this->ssid);
     WiFi.begin(this->ssid, this->password);
@@ -87,6 +109,8 @@ void MQTTClient::begin()
 
 boolean MQTTClient::publish(const char *topic, const char *payload, boolean retained)
 {
+    this->feedback.pubSubTransferStarted();
+
     uint8_t tries = 0;
 
     this->connect();
@@ -102,6 +126,8 @@ boolean MQTTClient::publish(const char *topic, const char *payload, boolean reta
         this->publish(topic, payload, retained);
     }
 
+    this->feedback.pubSubTransferCompleted();
+
     return true;
 }
 
@@ -110,7 +136,81 @@ void MQTTClient::setCallback(MQTT_CALLBACK_SIGNATURE)
     this->_client.setCallback(callback);
 }
 
+void MQTTClient::setReconnectionCallback(MQTT_STATE_CALLBACK_SIGNATURE)
+{
+    this->reconnectedCallback = reconnectedCallback;
+}
+
 boolean MQTTClient::loop()
 {
+    if (!_client.connected())
+    {
+        this->connect();
+    }
     return this->_client.loop();
+}
+
+#define MQTT_FEEDBACK_PIN_LOADING 33        // Loading pin for both Wifi and PubSub
+#define MQTT_FEEDBACK_PIN_WIFI_SUCCESS 25   // WiFiSuccess
+#define MQTT_FEEDBACK_PIN_PUBSUB_SUCCESS 26 // PubSub Success
+
+MQTTClientFeedback::MQTTClientFeedback()
+{
+}
+
+void MQTTClientFeedback::begin()
+{
+    pinMode(MQTT_FEEDBACK_PIN_LOADING, OUTPUT);
+    pinMode(MQTT_FEEDBACK_PIN_WIFI_SUCCESS, OUTPUT);
+    pinMode(MQTT_FEEDBACK_PIN_PUBSUB_SUCCESS, OUTPUT);
+}
+
+void MQTTClientFeedback::wifiConnectionStarted()
+{
+    digitalWrite(MQTT_FEEDBACK_PIN_LOADING, HIGH);
+}
+
+void MQTTClientFeedback::wifiConnectionIterationCompleted()
+{
+    digitalWrite(MQTT_FEEDBACK_PIN_LOADING, LOW);
+}
+
+void MQTTClientFeedback::wifiConnectionSuccess()
+{
+    digitalWrite(MQTT_FEEDBACK_PIN_WIFI_SUCCESS, HIGH);
+}
+
+void MQTTClientFeedback::wifiStatusReset()
+{
+    digitalWrite(MQTT_FEEDBACK_PIN_WIFI_SUCCESS, LOW);
+}
+
+void MQTTClientFeedback::pubSubCOnnectionStarted()
+{
+    digitalWrite(MQTT_FEEDBACK_PIN_LOADING, HIGH);
+}
+
+void MQTTClientFeedback::pubSubConnectionIterationCompleted()
+{
+    digitalWrite(MQTT_FEEDBACK_PIN_LOADING, LOW);
+}
+
+void MQTTClientFeedback::pubSubConnectionSuccess()
+{
+    digitalWrite(MQTT_FEEDBACK_PIN_PUBSUB_SUCCESS, HIGH);
+}
+
+void MQTTClientFeedback::pubSubTransferStarted()
+{
+    digitalWrite(MQTT_FEEDBACK_PIN_LOADING, HIGH);
+}
+
+void MQTTClientFeedback::pubSubTransferCompleted()
+{
+    digitalWrite(MQTT_FEEDBACK_PIN_LOADING, LOW);
+}
+
+void MQTTClientFeedback::pubSubStatusReset()
+{
+    digitalWrite(MQTT_FEEDBACK_PIN_PUBSUB_SUCCESS, LOW);
 }
