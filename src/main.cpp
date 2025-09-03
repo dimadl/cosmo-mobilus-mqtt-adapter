@@ -1,114 +1,107 @@
 #include <Arduino.h>
 #include <WiFi.h>
 #include <PubSubClient.h>
+#include <EEPROM.h>
+#include <WiFiManager.h>
+#include <Preferences.h>
 
-// WiFi
-const char *ssid = "";
-const char *password = "";
+#define HA_MQTT_DEBUG
+#include "./ha_mqtt/HAMQTTShutter.h"
+#include "./ha_mqtt/HAMQTTShutterControl.h"
+#include "./ha_mqtt/CosmoMobilusHardwareAdapter.h"
+#include "./ha_mqtt/mqtt_client/MQTTClient.h"
 
-// MQTT Broker
-const char *mqtt_broker = "";
-const char *topic_ha_status = "homeassistant/status";
-const char *mqtt_username = "mqtt_user";
-const char *mqtt_password = "";
-const int mqtt_port = 1883;
+Preferences preferences;
 
-const char *discoveryTopic = "homeassistant/switch/cosmo_mobilus_up/config";
+MQTTClient mqttClient;
 
-const char *stateTopic = "esp32/cosmo_mobilus/down/state";
-const char *commandTopic = "esp32/cosmo_mobilus/down/set";
-const char *discoveryPayload = R"rawliteral({
-  "name": "Cosmo Mobilus Button Down",
-  "command_topic": "esp32/cosmo_mobilus/down/set",
-  "state_topic": "esp32/cosmo_mobilus/down/state",
-  "unique_id": "cosmo_mobilus_down"
-})rawliteral";
-
-WiFiClient espClient;
-PubSubClient client(espClient);
-
-void log_message(char *topic, byte *payload, unsigned int length)
-{
-  Serial.print("Message arrived in topic: ");
-  Serial.println(topic);
-  Serial.print("Message:");
-  for (int i = 0; i < length; i++)
-  {
-    Serial.print((char)payload[i]);
-  }
-  Serial.println();
-  Serial.println("-----------------------");
-}
-
-void callback(char *topic, byte *payload, unsigned int length)
-{
-  log_message(topic, payload, length);
-  String incomingTopic = String(topic);
-  String message;
-
-  for (unsigned int i = 0; i < length; i++)
-  {
-    message += (char)payload[i];
-  }
-  message.trim();
-
-  if (incomingTopic == commandTopic)
-  {
-    if (message == "ON")
-    {
-      digitalWrite(23, HIGH);
-      client.publish(stateTopic, "ON");
-    }
-    else if (message == "OFF")
-    {
-      digitalWrite(23, LOW);
-      client.publish(stateTopic, "OFF");
-    }
-  }
-}
+ShutterControlPinsAssignment pins = {/* left */ 22, /* right */ 21, /* up */ 23, /* down */ 15, /* stop */ 5};
+CosmoMobilusHardwareAdapter hardwareAdapter = CosmoMobilusHardwareAdapter(pins);
+HAMQTTShutterControl haMqttControl(mqttClient, hardwareAdapter);
 
 void setup()
 {
   // Set software serial baud to 115200;
   Serial.begin(115200);
 
-  pinMode(23, OUTPUT);
+  EEPROM.begin(10);
 
-  // Connecting to a WiFi network
-  WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED)
+  // Load saved parameters from flash
+  preferences.begin("config", true);
+  String mqtt_broker = preferences.getString("mqtt_broker", "");
+  int mqtt_port = preferences.getInt("mqtt_port", 1883);
+  String mqtt_username = preferences.getString("mqtt_username", "");
+  String mqtt_password = preferences.getString("mqtt_password", "");
+  preferences.end();
+
+  // Let Wifi Manager do connection
+  WiFiManager wm;
+
+  WiFiManagerParameter custom_mqtt_broker("mqtt_broker", "MQTT Broker", mqtt_broker.c_str(), 40);
+  WiFiManagerParameter custom_mqtt_port("mqtt_port", "MQTT Port", String(mqtt_port).c_str(), 6);
+  WiFiManagerParameter custom_mqtt_username("mqtt_username", "MQTT Username", mqtt_username.c_str(), 40);
+  WiFiManagerParameter custom_mqtt_password("mqtt_password", "MQTT Password", mqtt_password.c_str(), 40, "type='password'");
+
+  wm.addParameter(&custom_mqtt_broker);
+  wm.addParameter(&custom_mqtt_port);
+  wm.addParameter(&custom_mqtt_username);
+  wm.addParameter(&custom_mqtt_password);
+
+  if (mqtt_broker.length() != 0 && mqtt_port != 0 && mqtt_username.length() != 0 && mqtt_password.length() != 0)
   {
-    delay(500);
-    Serial.println("Connecting to WiFi..");
-  }
-  Serial.println("Connected to the Wi-Fi network");
-  // connecting to a mqtt broker
-  client.setServer(mqtt_broker, mqtt_port);
-  client.setCallback(callback);
-  while (!client.connected())
-  {
-    String client_id = "esp32-client-";
-    client_id += String(WiFi.macAddress());
-    Serial.printf("The client %s connects to the public MQTT broker\n", client_id.c_str());
-    if (client.connect(client_id.c_str(), mqtt_username, mqtt_password))
+    Serial.println("MQTT Paramters exist. Auto connect");
+    if (!wm.autoConnect("Cosmo_Mobilus_PD_Adapter", "pd_adapter"))
     {
-      Serial.println("Public EMQX MQTT broker connected");
+      Serial.println("Failed to connect and hot timeout. Restarting..");
+      ESP.restart();
     }
-    else
+  }
+  else
+  {
+    Serial.println("MQTT Are not present. Starting the portal...");
+    wm.startConfigPortal("Cosmo_Mobilus_PD_Adapter", "pd_adapter");
+
+    if (wm.getWiFiIsSaved())
     {
-      Serial.print("failed with state ");
-      Serial.print(client.state());
-      delay(2000);
+      // Settings were saved via portal
+      Serial.println("WiFi connected.");
+      Serial.println("IP address: " + WiFi.localIP().toString());
+
+      mqtt_broker = custom_mqtt_broker.getValue();
+      mqtt_port = String(custom_mqtt_port.getValue()).toInt();
+      mqtt_username = custom_mqtt_username.getValue();
+      mqtt_password = custom_mqtt_password.getValue();
+
+      preferences.begin("config", false);
+      preferences.putString("mqtt_broker", mqtt_broker);
+      preferences.putInt("mqtt_port", mqtt_port);
+      preferences.putString("mqtt_username", mqtt_username);
+      preferences.putString("mqtt_password", mqtt_password);
+      preferences.end();
     }
   }
 
-  client.subscribe(topic_ha_status);
-  client.subscribe(commandTopic);
-  client.publish(discoveryTopic, discoveryPayload, true);
-  client.publish(stateTopic, "OFF");
+  mqttClient.setServer(mqtt_broker.c_str(), mqtt_port, mqtt_username.c_str(), mqtt_password.c_str());
+
+  HAMQTTShutter *shutterKitchen = new HAMQTTShutter("Shutter Kitchen", "shutter_kitchen", 16, mqttClient);
+  HAMQTTShutter *shutterLivingRoom = new HAMQTTShutter("Shutter Living Room", "shutter_livingroom", 16, mqttClient);
+  HAMQTTShutter *shutterLivingRoom2 = new HAMQTTShutter("Shutter Living Room 2", "shutter_livingroom_2", 16, mqttClient);
+  HAMQTTShutter *shutterLivingRoom3 = new HAMQTTShutter("Shutter Living Room 3", "shutter_livingroom_3", 16, mqttClient);
+  HAMQTTShutter *shutterLivingRoomGarden = new HAMQTTShutter("Shutter Garden", "shutter_garden", 25, mqttClient);
+  HAMQTTShutter *shutterOffice = new HAMQTTShutter("Shutter Office", "shutter_office", 16, mqttClient);
+  HAMQTTShutter *shutterBedroom = new HAMQTTShutter("Shutter Bedroom", "shutter_bedroom", 16, mqttClient);
+
+  haMqttControl.registerShutter(1, shutterLivingRoom);
+  haMqttControl.registerShutter(2, shutterLivingRoom2);
+  haMqttControl.registerShutter(3, shutterLivingRoom3);
+  haMqttControl.registerShutter(4, shutterLivingRoomGarden);
+  haMqttControl.registerShutter(5, shutterOffice);
+  haMqttControl.registerShutter(6, shutterBedroom);
+  haMqttControl.registerShutter(7, shutterKitchen);
+  haMqttControl.begin();
 }
 
 void loop()
 {
-  client.loop();
+  mqttClient.loop();
 }

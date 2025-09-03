@@ -39,7 +39,10 @@ public:
 class MQTTClient
 {
 public:
-    MQTTClient(const char *ssid, const char *password, const char *mqtt_broker, uint16_t mqtt_port, const char *mqtt_username, const char *mqtt_password);
+    MQTTClient();
+    ~MQTTClient();
+
+    void setServer(const char *mqtt_broker, uint16_t mqtt_port, const char *mqtt_username, const char *mqtt_password);
     void begin();
     boolean subscribe(const char *topic);
     boolean publish(const char *topic, const char *payload, boolean retained);

@@ -1,15 +1,21 @@
 #include "MQTTClient.h"
 
-MQTTClient::MQTTClient(const char *ssid, const char *password, const char *mqtt_broker, uint16_t mqtt_port, const char *mqtt_username, const char *mqtt_password) : wifiClient(), _client(wifiClient)
+MQTTClient::MQTTClient() : wifiClient(), _client(wifiClient)
+
+{
+    this->feedback = MQTTClientFeedback();
+}
+
+MQTTClient::~MQTTClient()
+{
+}
+
+void MQTTClient::setServer(const char *mqtt_broker, uint16_t mqtt_port, const char *mqtt_username, const char *mqtt_password)
 {
     this->mqtt_username = mqtt_username;
     this->mqtt_password = mqtt_password;
     this->mqtt_broker = mqtt_broker;
     this->mqtt_port = mqtt_port;
-    this->ssid = ssid;
-    this->password = password;
-
-    this->feedback = MQTTClientFeedback();
 }
 
 boolean MQTTClient::connect()
@@ -95,9 +101,6 @@ void MQTTClient::begin()
 {
     this->feedback.begin();
 
-    // Connecting to a WiFi network
-    Serial.printf("Connecting to Wifi Network %s\n", this->ssid);
-    WiFi.begin(this->ssid, this->password);
     while (WiFi.status() != WL_CONNECTED)
     {
         delay(500);
