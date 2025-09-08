@@ -15,7 +15,7 @@ Preferences preferences;
 
 MQTTClient mqttClient;
 
-ShutterControlPinsAssignment pins = {/* left */ 22, /* right */ 21, /* up */ 23, /* down */ 15, /* stop */ 5};
+ShutterControlPinsAssignment pins = {/* left */ 22, /* right */ 21, /* up */ 23, /* down */ 15, /* stop */ 4};
 CosmoMobilusHardwareAdapter hardwareAdapter = CosmoMobilusHardwareAdapter(pins);
 HAMQTTShutterControl haMqttControl(mqttClient, hardwareAdapter);
 
