@@ -20,7 +20,7 @@ HAMQTTShutterControl::HAMQTTShutterControl(MQTTClient &client, CosmoMobilusHardw
 
 void HAMQTTShutterControl::setCurrentPosition(uint8_t currentPosition)
 {
-    // save to memmemory to make it available after restart
+    // save to memmory to make it available after restart
     EEPROM.write(ADDRESS_POSITION, currentPosition);
     EEPROM.commit();
     Serial.printf("Saving the current position to the memmory %d\n", currentPosition);
@@ -91,16 +91,27 @@ void HAMQTTShutterControl::handleCommand(char *topic, byte *payload, unsigned in
 
     for (uint8_t shutterIndex = 0; shutterIndex < 8; shutterIndex++)
     {
-        if (shutters[shutterIndex] && shutters[shutterIndex]->getCommandTopic() == incomingTopic.c_str())
+        if (shutters[shutterIndex] && strcmp(shutters[shutterIndex]->getCommandTopic(), incomingTopic.c_str()) == 0)
         {
+
+            moveToShutterIndex(shutterIndex);
+
+            // adding delay between commands
+            delay(500);
 
             if (message == "CLOSE")
             {
-                close(shutters[shutterIndex]);
+                // WARNING: It's not how it should be implemented.
+                // CLOSE command means "start closing" and "close 100%".
+                // For now it's mainly for voice controls. Will be re-implemented
+                moveToPosition(shutterIndex, FULLY_CLOSED);
             }
             else if (message == "OPEN")
             {
-                // open();
+                // WARNING: It's not how it should be implemented.
+                // OPEN command means "start openning" and not "open 100%".
+                // For now it's mainly for voice controls. Will be re-implemented
+                moveToPosition(shutterIndex, FULLY_OPENED);
             }
             else if (message == "STOP")
             {
@@ -118,56 +129,8 @@ void HAMQTTShutterControl::handleCommand(char *topic, byte *payload, unsigned in
             // set position of the shutter
             uint8_t requestedPosition = message.toInt();
 
-            // current - 100
-            // requested - 80
-            // current - requested = 20
-            // ---> need to close shutter by 20%
-
-            // current - 40
-            // requested - 80
-            // current - requeszted = -40
-            // ----> need to open by 40%
-
-            HAMQTTShutter *selectedShutter = shutters[shutterIndex];
-
-            // calculate required delay based on the shutter's speed
-            int8_t diff = latestShutterPositions[shutterIndex] - requestedPosition;
-            Serial.printf("Required shift: %d\n", diff);
-
-            // add coefficient to erase the inaccuracy
-            uint16_t coefficient = (requestedPosition == FULLY_CLOSED) || (requestedPosition == FULLY_OPENED) ? 1 : 0;
-
-            double delay = abs(diff) * selectedShutter->getTimePerProcent() + coefficient;
-            Serial.printf("Calculated delay: %.4f\n", delay);
-            if (diff < 0)
-            {
-                // open
-                Serial.printf("Openning shutter: %d\n", shutterIndex);
-                openAndDelay(selectedShutter, delay);
-            }
-            else if (diff > 0)
-            {
-                // close
-                Serial.printf("Clossing shutter: %d\n", shutterIndex);
-                closeAndDelay(selectedShutter, delay);
-            }
-            else
-            {
-                // do nothing, stay on the same possition
-            }
-
-            Serial.printf("Report position: %d\n", requestedPosition);
-
-            if (requestedPosition == FULLY_CLOSED)
-            {
-                selectedShutter->reportClosed();
-            }
-
-            selectedShutter->reportPosition(requestedPosition);
-            latestShutterPositions[shutterIndex] = requestedPosition;
-            EEPROM.write(shutterIndex, requestedPosition);
-            EEPROM.commit();
-            Serial.printf("Saving the latest position of shutter %d to memmory: %d\n", shutterIndex, requestedPosition);
+            // move shutter to the position
+            moveToPosition(shutterIndex, requestedPosition);
         }
     }
 }
@@ -197,6 +160,61 @@ void HAMQTTShutterControl::moveToShutterIndex(uint8_t shutterIndex)
         // stay on the the same position of the control
     }
     setCurrentPosition(shutterIndex);
+}
+
+void HAMQTTShutterControl::moveToPosition(uint8_t shutterIndex, uint8_t requestedPosition)
+{
+    // ===== Usecases =====
+    // current - 100
+    // requested - 80
+    // current - requested = 20
+    // ---> need to close shutter by 20%
+
+    // current - 40
+    // requested - 80
+    // current - requeszted = -40
+    // ----> need to open by 40%
+
+    HAMQTTShutter *selectedShutter = shutters[shutterIndex];
+
+    // calculate required delay based on the shutter's speed
+    int8_t diff = latestShutterPositions[shutterIndex] - requestedPosition;
+    Serial.printf("Required shift: %d\n", diff);
+
+    // add coefficient to erase the inaccuracy
+    uint16_t coefficient = (requestedPosition == FULLY_CLOSED) || (requestedPosition == FULLY_OPENED) ? 1 : 0;
+
+    double delay = abs(diff) * selectedShutter->getTimePerProcent() + coefficient;
+    Serial.printf("Calculated delay: %.4f\n", delay);
+    if (diff < 0)
+    {
+        // open
+        Serial.printf("Openning shutter: %d\n", shutterIndex);
+        openAndDelay(selectedShutter, delay);
+    }
+    else if (diff > 0)
+    {
+        // close
+        Serial.printf("Clossing shutter: %d\n", shutterIndex);
+        closeAndDelay(selectedShutter, delay);
+    }
+    else
+    {
+        // do nothing, stay on the same possition
+    }
+
+    Serial.printf("Report position: %d\n", requestedPosition);
+
+    if (requestedPosition == FULLY_CLOSED)
+    {
+        selectedShutter->reportClosed();
+    }
+
+    selectedShutter->reportPosition(requestedPosition);
+    latestShutterPositions[shutterIndex] = requestedPosition;
+    EEPROM.write(shutterIndex, requestedPosition);
+    EEPROM.commit();
+    Serial.printf("Saving the latest position of shutter %d to memmory: %d\n", shutterIndex, requestedPosition);
 }
 
 void HAMQTTShutterControl::openAndDelay(HAMQTTShutter *shutter, uint16_t time)

@@ -41,6 +41,8 @@ private:
 
     void moveToShutterIndex(uint8_t shutterIndex);
 
+    void moveToPosition(uint8_t shutterIndex, uint8_t requestedPosition);
+
     void openAndDelay(HAMQTTShutter *shutter, uint16_t time);
     void closeAndDelay(HAMQTTShutter *shutter, uint16_t time);
     void moveControlForward(uint8_t diff);
