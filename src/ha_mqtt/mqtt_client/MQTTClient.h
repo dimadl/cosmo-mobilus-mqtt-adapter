@@ -55,8 +55,6 @@ private:
     PubSubClient _client;
     MQTTClientFeedback feedback;
 
-    std::string ssid;
-    std::string password;
     std::string mqtt_broker;
     uint16_t mqtt_port;
     std::string mqtt_username;
