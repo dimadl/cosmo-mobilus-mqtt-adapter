@@ -1,5 +1,5 @@
 #include <Arduino.h>
-#include "HAMQTTShutter.h"
+#include "./HAMQTTShutter.h"
 #include <PubSubClient.h>
 
 HAMQTTShutter::HAMQTTShutter(const char *name, const char *unique_id, uint8_t fullTimeToClose, MQTTClient &client) : _client(client)

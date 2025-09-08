@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include <PubSubClient.h>
 #include "CosmoMobilusHardwareAdapter.h"
-#include "HAMQTTShutter.h"
+#include "./shutter/HAMQTTShutter.h"
 #include "HAMQTTShutterControl.h"
 
 #include <EEPROM.h>

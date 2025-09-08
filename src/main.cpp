@@ -4,12 +4,27 @@
 #include <EEPROM.h>
 #include <WiFiManager.h>
 #include <Preferences.h>
+#include <ArduinoJson.h>
 
 #define HA_MQTT_DEBUG
-#include "./ha_mqtt/HAMQTTShutter.h"
+#include "./ha_mqtt/shutter/HAMQTTShutter.h"
 #include "./ha_mqtt/HAMQTTShutterControl.h"
 #include "./ha_mqtt/CosmoMobilusHardwareAdapter.h"
 #include "./ha_mqtt/mqtt_client/MQTTClient.h"
+
+const char *shuttersConfig = R"rawliteral(
+{
+  "shutters": [
+    {"id": "shutter_kitchen", "name": "Shutter Kitchen", "fullTimeToClose": 16, "index": "7"},
+    {"id": "shutter_livingroom", "name": "Shutter Living Room", "fullTimeToClose": 16, "index": "1"},
+    {"id": "shutter_livingroom_2", "name": "Shutter Living Room 2", "fullTimeToClose": 16, "index": "2"}, 
+    {"id": "shutter_livingroom_3", "name": "Shutter Living Room 3", "fullTimeToClose": 16, "index": "3"}, 
+    {"id": "shutter_garden", "name": "Shutter Garden", "fullTimeToClose": 25, "index": "4"}, 
+    {"id": "shutter_office", "name": "Shutter Office", "fullTimeToClose": 16, "index": "5"},
+    {"id": "shutter_bedroom", "name": "Shutter Bedroom", "fullTimeToClose": 16, "index": "6"}
+  ]
+}
+)rawliteral";
 
 Preferences preferences;
 
@@ -83,21 +98,27 @@ void setup()
 
   mqttClient.setServer(mqtt_broker.c_str(), mqtt_port, mqtt_username.c_str(), mqtt_password.c_str());
 
-  HAMQTTShutter *shutterKitchen = new HAMQTTShutter("Shutter Kitchen", "shutter_kitchen", 16, mqttClient);
-  HAMQTTShutter *shutterLivingRoom = new HAMQTTShutter("Shutter Living Room", "shutter_livingroom", 16, mqttClient);
-  HAMQTTShutter *shutterLivingRoom2 = new HAMQTTShutter("Shutter Living Room 2", "shutter_livingroom_2", 16, mqttClient);
-  HAMQTTShutter *shutterLivingRoom3 = new HAMQTTShutter("Shutter Living Room 3", "shutter_livingroom_3", 16, mqttClient);
-  HAMQTTShutter *shutterLivingRoomGarden = new HAMQTTShutter("Shutter Garden", "shutter_garden", 25, mqttClient);
-  HAMQTTShutter *shutterOffice = new HAMQTTShutter("Shutter Office", "shutter_office", 16, mqttClient);
-  HAMQTTShutter *shutterBedroom = new HAMQTTShutter("Shutter Bedroom", "shutter_bedroom", 16, mqttClient);
+  DynamicJsonDocument shutterConfigResult(1024);
+  DeserializationError error = deserializeJson(shutterConfigResult, shuttersConfig);
 
-  haMqttControl.registerShutter(1, shutterLivingRoom);
-  haMqttControl.registerShutter(2, shutterLivingRoom2);
-  haMqttControl.registerShutter(3, shutterLivingRoom3);
-  haMqttControl.registerShutter(4, shutterLivingRoomGarden);
-  haMqttControl.registerShutter(5, shutterOffice);
-  haMqttControl.registerShutter(6, shutterBedroom);
-  haMqttControl.registerShutter(7, shutterKitchen);
+  if (error)
+  {
+    Serial.print("JSON parse failed: ");
+    Serial.println(error.c_str());
+    return;
+  }
+
+  JsonArray fields = shutterConfigResult["shutters"];
+  for (JsonObject field : fields)
+  {
+    const char *id = field["id"];
+    const char *placeholder = field["name"];
+    Serial.printf("Field: ID=%s, Placeholder=%s\n", id, placeholder);
+
+    HAMQTTShutter *shutter = new HAMQTTShutter(field["name"], field["id"], field["fullTimeToClose"], mqttClient);
+    haMqttControl.registerShutter(field["index"], shutter);
+  }
+
   haMqttControl.begin();
 }
 

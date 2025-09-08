@@ -3,7 +3,7 @@
 
 #include <Arduino.h>
 #include <PubSubClient.h>
-#include "./mqtt_client/MQTTClient.h"
+#include "../mqtt_client/MQTTClient.h"
 
 #define HA_MQTT_SHUTTER_DEBUG
 

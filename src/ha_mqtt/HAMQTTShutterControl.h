@@ -1,7 +1,7 @@
 #ifndef HA_MQTT_SHUTTER_CONTROL_H
 #define HA_MQTT_SHUTTER_CONTROL_H
 
-#include "HAMQTTShutter.h"
+#include "./shutter/HAMQTTShutter.h"
 #include "CosmoMobilusHardwareAdapter.h"
 #include "./mqtt_client/MQTTClient.h"
 
