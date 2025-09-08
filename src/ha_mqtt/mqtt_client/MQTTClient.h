@@ -42,7 +42,7 @@ public:
     MQTTClient();
     ~MQTTClient();
 
-    void setServer(const char *mqtt_broker, uint16_t mqtt_port, const char *mqtt_username, const char *mqtt_password);
+    void setServer(const std::string &mqtt_broker, uint16_t mqtt_port, const std::string &mqtt_username, const std::string &mqtt_password);
     void begin();
     boolean subscribe(const char *topic);
     boolean publish(const char *topic, const char *payload, boolean retained);
@@ -55,12 +55,12 @@ private:
     PubSubClient _client;
     MQTTClientFeedback feedback;
 
-    const char *ssid;
-    const char *password;
-    const char *mqtt_broker;
+    std::string ssid;
+    std::string password;
+    std::string mqtt_broker;
     uint16_t mqtt_port;
-    const char *mqtt_username;
-    const char *mqtt_password;
+    std::string mqtt_username;
+    std::string mqtt_password;
 
     boolean connect();
     MQTT_STATE_CALLBACK_SIGNATURE;

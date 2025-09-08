@@ -10,7 +10,7 @@ MQTTClient::~MQTTClient()
 {
 }
 
-void MQTTClient::setServer(const char *mqtt_broker, uint16_t mqtt_port, const char *mqtt_username, const char *mqtt_password)
+void MQTTClient::setServer(const std::string &mqtt_broker, uint16_t mqtt_port, const std::string &mqtt_username, const std::string &mqtt_password)
 {
     this->mqtt_username = mqtt_username;
     this->mqtt_password = mqtt_password;
@@ -50,10 +50,12 @@ boolean MQTTClient::connect()
         // "PubSub connection" started
         this->feedback.pubSubCOnnectionStarted();
 
+        // this->_client.setServer(this->mqtt_broker, this->mqtt_port);
+
         String client_id = "esp32-client-1";
         client_id += String(WiFi.macAddress());
         Serial.printf("The client %s connects to the public MQTT broker\n", client_id.c_str());
-        if (_client.connect(client_id.c_str(), mqtt_username, mqtt_password))
+        if (_client.connect(client_id.c_str(), mqtt_username.c_str(), mqtt_password.c_str()))
         {
             Serial.println("Public EMQX MQTT broker connected");
         }
@@ -107,7 +109,7 @@ void MQTTClient::begin()
         Serial.print("Connecting to WiFi...");
     }
     Serial.println("WiFi connected");
-    this->_client.setServer(mqtt_broker, mqtt_port).setBufferSize(MQTT_MESSAGE_BUFFER);
+    this->_client.setServer(mqtt_broker.c_str(), mqtt_port).setBufferSize(MQTT_MESSAGE_BUFFER);
 }
 
 boolean MQTTClient::publish(const char *topic, const char *payload, boolean retained)
@@ -117,6 +119,7 @@ boolean MQTTClient::publish(const char *topic, const char *payload, boolean reta
     uint8_t tries = 0;
 
     this->connect();
+    Serial.printf("Publishing to %s\n", this->mqtt_broker.c_str());
     while (!this->_client.publish(topic, payload, retained))
     {
         Serial.printf("Publish on topic %s failed. Retry is on\n", topic);
