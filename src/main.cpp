@@ -113,7 +113,6 @@ void setup()
   {
     const char *id = field["id"];
     const char *placeholder = field["name"];
-    Serial.printf("Field: ID=%s, Placeholder=%s\n", id, placeholder);
 
     HAMQTTShutter *shutter = new HAMQTTShutter(field["name"], field["id"], field["fullTimeToClose"], mqttClient);
     haMqttControl.registerShutter(field["index"], shutter);

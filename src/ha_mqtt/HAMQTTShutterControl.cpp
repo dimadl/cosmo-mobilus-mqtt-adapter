@@ -33,6 +33,7 @@ uint8_t HAMQTTShutterControl::getCurrentPosition()
 
 void HAMQTTShutterControl::initConnection()
 {
+    this->_client.subscribe(topic_ha_control_command);
     this->_client.subscribe(topic_ha_status);
 
     // hardware
@@ -81,6 +82,13 @@ void HAMQTTShutterControl::onMqttMessage(const MqttMessage &msg)
     String incomingTopic = String(msg.topic);
     String message = String(msg.payload);
 
+    // Hardware
+    if (strcmp(incomingTopic.c_str(), topic_ha_control_command) == 0 && strcmp(message.c_str(), "reboot") == 0)
+    {
+        this->reboot();
+    }
+
+    // Shutter Control
     for (uint8_t shutterIndex = 0; shutterIndex < 8; shutterIndex++)
     {
         if (shutters[shutterIndex] && strcmp(shutters[shutterIndex]->getCommandTopic(), incomingTopic.c_str()) == 0)
@@ -267,6 +275,11 @@ void HAMQTTShutterControl::close(HAMQTTShutter *shutter)
     // Track passedTime / reuiredTimeToFullyClose * 100%
     //    1. If Stop was not pressed and passedTime / reuiredTimeToFullyClose * 100% > reuiredTimeToFullyClose consider fully closed and publish closed stated
     //    2. If Stop was pressed, calculate the current position passedTime / reuiredTimeToFullyClose * 100% and publish open state and the position
+}
+
+void HAMQTTShutterControl::reboot()
+{
+    ESP.restart();
 }
 
 void mqttReconnectionCallBack()

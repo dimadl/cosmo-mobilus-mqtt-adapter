@@ -27,6 +27,7 @@ private:
     CosmoMobilusHardwareAdapter &_hardware;
 
     const char *topic_ha_status = "homeassistant/status";
+    const char *topic_ha_control_command = "cosmo-ha-adapter/command";
 
     HAMQTTShutter *shutters[8] = {nullptr};
     uint8_t latestShutterPositions[8];
@@ -49,6 +50,8 @@ private:
     void moveControlForward(uint8_t diff);
     void moveControlBackward(uint8_t diff);
     void close(HAMQTTShutter *shutter);
+
+    void reboot();
 };
 
 #endif // HA_MQTT_SHUTTER_CONTROL_H
