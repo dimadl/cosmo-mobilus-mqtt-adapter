@@ -1,9 +1,16 @@
 #include "MQTTClient.h"
 
+MQTTClient *instancePtr = nullptr;
+
+void log_message(char *topic, byte *payload, unsigned int length);
+
 MQTTClient::MQTTClient() : wifiClient(), _client(wifiClient)
 
 {
     this->feedback = MQTTClientFeedback();
+    this->_messageQueue = xQueueCreate(10, sizeof(MqttMessage));
+
+    instancePtr = this;
 }
 
 MQTTClient::~MQTTClient()
@@ -74,6 +81,48 @@ boolean MQTTClient::connect()
     return true;
 }
 
+void MQTTClient::mqttCallbackStatic(char *topic, byte *payload, unsigned int length)
+{
+    if (instancePtr)
+    {
+        instancePtr->mqttCallback(topic, payload, length);
+    }
+}
+
+void MQTTClient::mqttCallback(char *topic, byte *payload, unsigned int length)
+{
+    log_message(topic, payload, length);
+
+    MqttMessage msg;
+
+    strncpy(msg.topic, topic, sizeof(msg.topic) - 1);
+    msg.topic[sizeof(msg.topic) - 1] = '\0';
+
+    length = min(length, sizeof(msg.payload) - 1);
+    memcpy(msg.payload, payload, length);
+    msg.payload[length] = '\0';
+
+    xQueueSend(_messageQueue, &msg, 0);
+}
+
+void MQTTClient::messageProcessorTask(void *param)
+{
+
+    MQTTClient *self = static_cast<MQTTClient *>(param);
+    MqttMessage msg;
+
+    while (true)
+    {
+        if (xQueueReceive(self->_messageQueue, &msg, portMAX_DELAY))
+        {
+            if (self->_userCallback)
+            {
+                self->_userCallback(msg);
+            }
+        }
+    }
+}
+
 boolean MQTTClient::subscribe(const char *topic)
 {
     this->feedback.pubSubTransferStarted();
@@ -110,6 +159,18 @@ void MQTTClient::begin()
     }
     Serial.println("WiFi connected");
     this->_client.setServer(mqtt_broker.c_str(), mqtt_port).setBufferSize(MQTT_MESSAGE_BUFFER);
+    this->_client.setCallback(mqttCallbackStatic);
+
+    // Start the message processing task
+    xTaskCreatePinnedToCore(
+        messageProcessorTask,
+        "MQTTProcessor",
+        4096,
+        this,
+        1,
+        NULL,
+        1 // Core 1
+    );
 }
 
 boolean MQTTClient::publish(const char *topic, const char *payload, boolean retained)
@@ -137,9 +198,9 @@ boolean MQTTClient::publish(const char *topic, const char *payload, boolean reta
     return true;
 }
 
-void MQTTClient::setCallback(MQTT_CALLBACK_SIGNATURE)
+void MQTTClient::setMessageCallback(MessageCallback callback)
 {
-    this->_client.setCallback(callback);
+    _userCallback = callback;
 }
 
 void MQTTClient::setReconnectionCallback(MQTT_STATE_CALLBACK_SIGNATURE)
@@ -219,4 +280,17 @@ void MQTTClientFeedback::pubSubTransferCompleted()
 void MQTTClientFeedback::pubSubStatusReset()
 {
     digitalWrite(MQTT_FEEDBACK_PIN_PUBSUB_SUCCESS, LOW);
+}
+
+void log_message(char *topic, byte *payload, unsigned int length)
+{
+    Serial.print("Message arrived in topic: ");
+    Serial.println(topic);
+    Serial.print("Message:");
+    for (int i = 0; i < length; i++)
+    {
+        Serial.print((char)payload[i]);
+    }
+    Serial.println();
+    Serial.println("-----------------------");
 }

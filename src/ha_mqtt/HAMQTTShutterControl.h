@@ -20,7 +20,6 @@ public:
     HAMQTTShutterControl(MQTTClient &client, CosmoMobilusHardwareAdapter &hardware);
     void begin();
     void registerShutter(uint8_t index, HAMQTTShutter *shutter);
-    void handleCommand(char *topic, byte *payload, unsigned int length);
     void initConnection();
 
 private:
@@ -34,6 +33,8 @@ private:
 
     // internal state of the control
     uint8_t currentPosition;
+
+    void onMqttMessage(const MqttMessage &msg);
 
     // Methods
     void setCurrentPosition(uint8_t currentPosition);

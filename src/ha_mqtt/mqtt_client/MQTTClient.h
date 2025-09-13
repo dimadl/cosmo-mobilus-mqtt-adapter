@@ -13,6 +13,14 @@
 #define MQTT_STATE_CALLBACK_SIGNATURE std::function<void()> reconnectedCallback
 #endif
 
+struct MqttMessage
+{
+    char topic[128];
+    char payload[256];
+};
+
+using MessageCallback = std::function<void(const MqttMessage &)>;
+
 class MQTTClientFeedback
 {
 public:
@@ -46,7 +54,8 @@ public:
     void begin();
     boolean subscribe(const char *topic);
     boolean publish(const char *topic, const char *payload, boolean retained);
-    void setCallback(MQTT_CALLBACK_SIGNATURE);
+
+    void setMessageCallback(MessageCallback callback);
     void setReconnectionCallback(MQTT_STATE_CALLBACK_SIGNATURE);
     boolean loop();
 
@@ -60,7 +69,15 @@ private:
     std::string mqtt_username;
     std::string mqtt_password;
 
+    QueueHandle_t _messageQueue;
+    MessageCallback _userCallback = nullptr;
+
     boolean connect();
+    static void mqttCallbackStatic(char *topic, byte *payload, unsigned int length);
+    void mqttCallback(char *topic, byte *payload, unsigned int length);
+
+    static void messageProcessorTask(void *param);
+
     MQTT_STATE_CALLBACK_SIGNATURE;
 };
 

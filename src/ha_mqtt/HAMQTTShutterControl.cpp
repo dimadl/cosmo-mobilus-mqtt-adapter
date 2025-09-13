@@ -8,8 +8,6 @@
 
 HAMQTTShutterControl *HAMQTTShutterControl::instance = nullptr;
 
-void log_message(char *topic, byte *payload, unsigned int length);
-void mqttCallback(char *topic, byte *payload, unsigned int length);
 void mqttReconnectionCallBack();
 
 HAMQTTShutterControl::HAMQTTShutterControl(MQTTClient &client, CosmoMobilusHardwareAdapter &hardware)
@@ -70,24 +68,18 @@ void HAMQTTShutterControl::begin()
     this->currentPosition = memCurrentControlPosition == 255 ? 0 : memCurrentControlPosition;
     Serial.printf("Read the current contorl position from memmory: %d\n", memCurrentControlPosition);
 
-    this->_client.begin();
     this->_client.setReconnectionCallback(mqttReconnectionCallBack);
-    this->_client.setCallback(mqttCallback);
+    this->_client.setMessageCallback([this](const MqttMessage &msg)
+                                     { this->onMqttMessage(msg); });
+    this->_client.begin();
 
     initConnection();
 }
 
-void HAMQTTShutterControl::handleCommand(char *topic, byte *payload, unsigned int length)
+void HAMQTTShutterControl::onMqttMessage(const MqttMessage &msg)
 {
-    log_message(topic, payload, length);
-    String incomingTopic = String(topic);
-    String message;
-
-    for (unsigned int i = 0; i < length; i++)
-    {
-        message += (char)payload[i];
-    }
-    message.trim();
+    String incomingTopic = String(msg.topic);
+    String message = String(msg.payload);
 
     for (uint8_t shutterIndex = 0; shutterIndex < 8; shutterIndex++)
     {
@@ -277,31 +269,10 @@ void HAMQTTShutterControl::close(HAMQTTShutter *shutter)
     //    2. If Stop was pressed, calculate the current position passedTime / reuiredTimeToFullyClose * 100% and publish open state and the position
 }
 
-void mqttCallback(char *topic, byte *payload, unsigned int length)
-{
-    if (HAMQTTShutterControl::instance)
-    {
-        HAMQTTShutterControl::instance->handleCommand(topic, payload, length);
-    }
-}
-
 void mqttReconnectionCallBack()
 {
     if (HAMQTTShutterControl::instance)
     {
         HAMQTTShutterControl::instance->initConnection();
     }
-}
-
-void log_message(char *topic, byte *payload, unsigned int length)
-{
-    Serial.print("Message arrived in topic: ");
-    Serial.println(topic);
-    Serial.print("Message:");
-    for (int i = 0; i < length; i++)
-    {
-        Serial.print((char)payload[i]);
-    }
-    Serial.println();
-    Serial.println("-----------------------");
 }
