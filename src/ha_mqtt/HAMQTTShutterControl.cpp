@@ -86,6 +86,7 @@ void HAMQTTShutterControl::onMqttMessage(const MqttMessage &msg)
     if (strcmp(incomingTopic.c_str(), topic_ha_control_command) == 0 && strcmp(message.c_str(), "reboot") == 0)
     {
         this->reboot();
+        return;
     }
 
     // Shutter Control
@@ -190,13 +191,13 @@ void HAMQTTShutterControl::moveToPosition(uint8_t shutterIndex, uint8_t requeste
     {
         // open
         Serial.printf("Openning shutter: %d\n", shutterIndex);
-        openAndDelay(selectedShutter, delay);
+        openAndDelay(selectedShutter, delay, requestedPosition != FULLY_OPENED);
     }
     else if (diff > 0)
     {
         // close
         Serial.printf("Clossing shutter: %d\n", shutterIndex);
-        closeAndDelay(selectedShutter, delay);
+        closeAndDelay(selectedShutter, delay, requestedPosition != FULLY_CLOSED);
     }
     else
     {
@@ -217,32 +218,46 @@ void HAMQTTShutterControl::moveToPosition(uint8_t shutterIndex, uint8_t requeste
     Serial.printf("Saving the latest position of shutter %d to memmory: %d\n", shutterIndex, requestedPosition);
 }
 
-void HAMQTTShutterControl::openAndDelay(HAMQTTShutter *shutter, uint16_t time)
+void HAMQTTShutterControl::openAndDelay(HAMQTTShutter *shutter, uint16_t time, bool doPressStop)
 {
     // request to open
     shutter->reportOpening();
     _hardware.pressUp();
 
-    // main delay
-    delay(time * 1000);
-
     // stop
-    _hardware.pressStop();
+    if (doPressStop)
+    {
+        // main delay
+        delay(time * 1000);
+        _hardware.pressStop();
+    }
+    else
+    {
+        delay(200);
+    }
+
     shutter->reportStopped();
     shutter->reportOpened();
 }
 
-void HAMQTTShutterControl::closeAndDelay(HAMQTTShutter *shutter, uint16_t time)
+void HAMQTTShutterControl::closeAndDelay(HAMQTTShutter *shutter, uint16_t time, bool doPressStop)
 {
     // request to close
     shutter->reportClosing();
     _hardware.pressDown();
 
-    // wait for required time
-    delay(time * 1000);
-
     // stop
-    _hardware.pressStop();
+    if (doPressStop)
+    {
+        // wait for required time
+        delay(time * 1000);
+        _hardware.pressStop();
+    }
+    else
+    {
+        delay(200);
+    }
+
     shutter->reportStopped();
 }
 
