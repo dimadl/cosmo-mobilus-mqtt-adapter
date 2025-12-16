@@ -16,6 +16,9 @@ There is no native support for COSMO protocol in Home Assistant.
 - [x] Shutter positions are stored in memory to prevent re-synchronization after restarts.
 - [x] The current position of the remote control unit is also saved in memory.
 
+## Schematic
+![Schematic](/hardware/schematic_v1.0.png)
+
 ## Supported Device
 - Mobilus COSMO HM
 - Mobilus COSMO HM1
