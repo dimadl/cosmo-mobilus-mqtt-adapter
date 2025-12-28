@@ -1,12 +1,15 @@
 #include <Arduino.h>
 #include <PubSubClient.h>
 #include "CosmoMobilusHardwareAdapter.h"
+#include "HAMQTTHealthCheck.h"
 #include "./shutter/HAMQTTShutter.h"
 #include "HAMQTTShutterControl.h"
 
 #include <EEPROM.h>
 
 HAMQTTShutterControl *HAMQTTShutterControl::instance = nullptr;
+
+long lastSaved;
 
 void mqttReconnectionCallBack();
 
@@ -49,6 +52,8 @@ void HAMQTTShutterControl::initConnection()
             _client.subscribe(shutters[i]->getSetPositionTopic());
         }
     }
+
+    healthCHeck->begin();
 }
 
 void HAMQTTShutterControl::registerShutter(uint8_t index, HAMQTTShutter *shutter)
@@ -82,10 +87,11 @@ void HAMQTTShutterControl::onMqttMessage(const MqttMessage &msg)
     String incomingTopic = String(msg.topic);
     String message = String(msg.payload);
 
-    // Hardware
-    if (strcmp(incomingTopic.c_str(), topic_ha_control_command) == 0 && strcmp(message.c_str(), "reboot") == 0)
+    // Healthcheck
+    if (strcmp(incomingTopic.c_str(), topic_ha_control_command) == 0 && strcmp(message.c_str(), "ping") == 0)
     {
-        this->reboot();
+        Serial.println("Ping received");
+        healthCHeck->ping();
         return;
     }
 
@@ -290,11 +296,6 @@ void HAMQTTShutterControl::close(HAMQTTShutter *shutter)
     // Track passedTime / reuiredTimeToFullyClose * 100%
     //    1. If Stop was not pressed and passedTime / reuiredTimeToFullyClose * 100% > reuiredTimeToFullyClose consider fully closed and publish closed stated
     //    2. If Stop was pressed, calculate the current position passedTime / reuiredTimeToFullyClose * 100% and publish open state and the position
-}
-
-void HAMQTTShutterControl::reboot()
-{
-    ESP.restart();
 }
 
 void mqttReconnectionCallBack()
