@@ -6,6 +6,10 @@
 #include <Preferences.h>
 #include <ArduinoJson.h>
 
+#include <WiFiClient.h>
+#include <WebServer.h>
+#include <ElegantOTA.h>
+
 #define HA_MQTT_DEBUG
 #include "./ha_mqtt/shutter/HAMQTTShutter.h"
 #include "./ha_mqtt/HAMQTTShutterControl.h"
@@ -25,6 +29,8 @@ const char *shuttersConfig = R"rawliteral(
   ]
 }
 )rawliteral";
+
+WebServer server(80);
 
 Preferences preferences;
 
@@ -119,9 +125,17 @@ void setup()
   }
 
   haMqttControl.begin();
+
+  server.on("/", []()
+            { server.send(200, "text/plain", "Hi! This is ElegantOTA Demo."); });
+
+  ElegantOTA.begin(&server);
+
+  server.begin();
 }
 
 void loop()
 {
   mqttClient.loop();
+  ElegantOTA.loop();
 }
