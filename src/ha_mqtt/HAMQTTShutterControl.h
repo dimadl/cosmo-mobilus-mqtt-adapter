@@ -3,6 +3,7 @@
 
 #include "./shutter/HAMQTTShutter.h"
 #include "CosmoMobilusHardwareAdapter.h"
+#include "HAMQTTHealthCheck.h"
 #include "./mqtt_client/MQTTClient.h"
 
 #define FULLY_OPENED 100
@@ -25,6 +26,8 @@ public:
 private:
     MQTTClient &_client;
     CosmoMobilusHardwareAdapter &_hardware;
+
+    HAMQTTHealthCheck *healthCHeck = new HAMQTTHealthCheck();
 
     const char *topic_ha_status = "homeassistant/status";
     const char *topic_ha_control_command = "cosmo-ha-adapter/command";
@@ -50,8 +53,6 @@ private:
     void moveControlForward(uint8_t diff);
     void moveControlBackward(uint8_t diff);
     void close(HAMQTTShutter *shutter);
-
-    void reboot();
 };
 
 #endif // HA_MQTT_SHUTTER_CONTROL_H
