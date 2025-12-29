@@ -1,3 +1,5 @@
+[![PlatformIO CI](https://github.com/dimadl/cosmo-mobilus-mqtt-adapter/actions/workflows/platformio-ci.yml/badge.svg)](https://github.com/dimadl/cosmo-mobilus-mqtt-adapter/actions/workflows/platformio-ci.yml)
+
 # COSMO Mobilus shutters x Home Assistant (MQTT) Adapter
 This repository provides all the necessary information—both software and hardware—to build your own adapter that connects COSMO Mobilus-controlled shutters to Home Assistant via MQTT.
 
