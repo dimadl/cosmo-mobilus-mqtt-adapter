@@ -6,8 +6,10 @@
 #include <Preferences.h>
 #include <ArduinoJson.h>
 
-#include <WiFiClient.h>
-#include <WebServer.h>
+// OTA
+
+#include <AsyncTCP.h>
+#include <ESPAsyncWebServer.h>
 #include <ElegantOTA.h>
 
 #define HA_MQTT_DEBUG
@@ -30,7 +32,7 @@ const char *shuttersConfig = R"rawliteral(
 }
 )rawliteral";
 
-WebServer server(80);
+AsyncWebServer server(80);
 
 Preferences preferences;
 
@@ -39,6 +41,23 @@ MQTTClient mqttClient;
 ShutterControlPinsAssignment pins = {/* left */ 22, /* right */ 21, /* up */ 23, /* down */ 15, /* stop */ 4};
 CosmoMobilusHardwareAdapter hardwareAdapter = CosmoMobilusHardwareAdapter(pins);
 HAMQTTShutterControl haMqttControl(mqttClient, hardwareAdapter);
+
+void onOTAStart()
+{
+  Serial.println("OTA update started!");
+}
+
+void onOTAEnd(bool success)
+{
+  if (success)
+  {
+    Serial.println("OTA update finished successfully!");
+  }
+  else
+  {
+    Serial.println("There was an error during OTA update!");
+  }
+}
 
 void setup()
 {
@@ -126,16 +145,16 @@ void setup()
 
   haMqttControl.begin();
 
-  server.on("/", []()
-            { server.send(200, "text/plain", "Hi! This is ElegantOTA Demo."); });
-
+  // Over The Air updater
   ElegantOTA.begin(&server);
+  ElegantOTA.onStart(onOTAStart);
+  ElegantOTA.onEnd(onOTAEnd);
 
   server.begin();
 }
 
 void loop()
 {
-  mqttClient.loop();
   ElegantOTA.loop();
+  mqttClient.loop();
 }
