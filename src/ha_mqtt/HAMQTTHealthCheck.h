@@ -9,7 +9,7 @@
 /*
     Threshold after which the system enters disconnected state and the onDisconnected() method is triggered
 */
-#define HA_MQTT_HEALTH_CHECK_THRESHOLD 60000 * 5 // in millis, 5 minutes
+#define HA_MQTT_HEALTH_CHECK_THRESHOLD 60000 * 1 // in millis, 5 minutes
 
 /*
     The class defines health check processing function.
