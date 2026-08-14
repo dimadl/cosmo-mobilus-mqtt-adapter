@@ -12,6 +12,12 @@
 #define EEPROM_SIZE 8
 #define ADDRESS_POSITION 8
 
+#ifndef SHUTTERS_SIZE
+#define SHUTTERS_SIZE 8
+#endif // SHUTTERS_SIZE
+
+#define SHUTTERS_SIZE_COMP SHUTTERS_SIZE + 1
+
 class HAMQTTShutterControl
 {
 
@@ -32,8 +38,8 @@ private:
     const char *topic_ha_status = "homeassistant/status";
     const char *topic_ha_control_command = "cosmo-ha-adapter/command";
 
-    HAMQTTShutter *shutters[8] = {nullptr};
-    uint8_t latestShutterPositions[8];
+    HAMQTTShutter *shutters[SHUTTERS_SIZE_COMP] = {nullptr};
+    uint8_t latestShutterPositions[SHUTTERS_SIZE_COMP];
 
     // internal state of the control
     uint8_t currentPosition;

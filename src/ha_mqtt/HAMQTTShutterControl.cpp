@@ -42,7 +42,7 @@ void HAMQTTShutterControl::initConnection()
     // hardware
     _hardware.begin();
 
-    for (uint8_t i = 0; i < 8; i++)
+    for (uint8_t i = 0; i < SHUTTERS_SIZE_COMP; i++)
     {
         if (shutters[i])
         {
@@ -58,6 +58,7 @@ void HAMQTTShutterControl::initConnection()
 
 void HAMQTTShutterControl::registerShutter(uint8_t index, HAMQTTShutter *shutter)
 {
+    Serial.println(index);
     // Check if the index is in bound
     this->shutters[index] = shutter;
 
@@ -96,7 +97,7 @@ void HAMQTTShutterControl::onMqttMessage(const MqttMessage &msg)
     }
 
     // Shutter Control
-    for (uint8_t shutterIndex = 0; shutterIndex < 8; shutterIndex++)
+    for (uint8_t shutterIndex = 0; shutterIndex < SHUTTERS_SIZE_COMP; shutterIndex++)
     {
         if (shutters[shutterIndex] && strcmp(shutters[shutterIndex]->getCommandTopic(), incomingTopic.c_str()) == 0)
         {

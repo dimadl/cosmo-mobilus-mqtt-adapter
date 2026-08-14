@@ -18,16 +18,19 @@
 #include "./ha_mqtt/CosmoMobilusHardwareAdapter.h"
 #include "./ha_mqtt/mqtt_client/MQTTClient.h"
 
+#define SHUTTERS_SIZE 8
+
 const char *shuttersConfig = R"rawliteral(
 {
   "shutters": [
-    {"id": "shutter_kitchen", "name": "Shutter Kitchen", "fullTimeToClose": 16, "index": "8"},
+    {"id": "shutter_kitchen", "name": "Shutter Kitchen", "fullTimeToClose": 16, "index": "1"},
     {"id": "shutter_livingroom", "name": "Shutter Living Room", "fullTimeToClose": 16, "index": "2"},
-    {"id": "shutter_livingroom_2", "name": "Shutter Living Room 2", "fullTimeToClose": 16, "index": "4"},
-    {"id": "shutter_livingroom_3", "name": "Shutter Living Room 3", "fullTimeToClose": 16, "index": "3"},
+    {"id": "shutter_livingroom_2", "name": "Shutter Living Room 2", "fullTimeToClose": 16, "index": "3"},
+    {"id": "shutter_livingroom_3", "name": "Shutter Living Room 3", "fullTimeToClose": 16, "index": "4"},
     {"id": "shutter_garden", "name": "Shutter Garden", "fullTimeToClose": 25, "index": "5"},
-    {"id": "shutter_office", "name": "Shutter Office", "fullTimeToClose": 16, "index": "1"}, 
-    {"id": "shutter_bedroom", "name": "Shutter Bedroom", "fullTimeToClose": 16, "index": "7"} 
+    {"id": "shutter_office", "name": "Shutter Office", "fullTimeToClose": 16, "index": "6"}, 
+    {"id": "shutter_bedroom", "name": "Shutter Bedroom", "fullTimeToClose": 16, "index": "7"},
+    {"id": "shutters_all", "name": "Shutters All", "fullTimeToClose": 16, "index": "8"} 
   ]
 }
 )rawliteral";
